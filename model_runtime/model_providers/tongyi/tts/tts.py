@@ -7,10 +7,10 @@ from dashscope import SpeechSynthesizer
 from dashscope.api_entities.dashscope_response import SpeechSynthesisResponse
 from dashscope.audio.tts import ResultCallback, SpeechSynthesisResult
 
-from core.model_runtime.errors.invoke import InvokeBadRequestError
-from core.model_runtime.errors.validate import CredentialsValidateFailedError
-from core.model_runtime.model_providers.__base.tts_model import TTSModel
-from core.model_runtime.model_providers.tongyi._common import _CommonTongyi
+from model_runtime.errors.invoke import InvokeBadRequestError
+from model_runtime.errors.validate import CredentialsValidateFailedError
+from model_runtime.model_providers.__base.tts_model import TTSModel
+from model_runtime.model_providers.tongyi._common import _CommonTongyi
 
 
 class TongyiText2SpeechModel(_CommonTongyi, TTSModel):

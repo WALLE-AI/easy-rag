@@ -7,7 +7,7 @@ from dashscope.common.error import (
     UnsupportedModel,
 )
 
-from core.model_runtime.errors.invoke import (
+from model_runtime.errors.invoke import (
     InvokeAuthorizationError,
     InvokeBadRequestError,
     InvokeConnectionError,

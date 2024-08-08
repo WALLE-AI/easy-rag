@@ -6,6 +6,7 @@ from werkzeug.datastructures import FileStorage
 
 from config import app_config
 from services.db_model.uploadfile import UploadFile
+from services.storge import storage
 from utils.error.file_error import UnsupportedFileTypeError, FileTooLargeError
 
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg']
@@ -28,7 +29,7 @@ class FileService:
             filename = filename.split('.')[0][:200] + '.' + extension
         allowed_extensions =  IMAGE_EXTENSIONS
         if extension.lower() not in allowed_extensions:
-            raise UnsupportedFileTypeError()
+            raise UnsupportedFileTypeError("file format no support")
         elif only_image and extension.lower() not in IMAGE_EXTENSIONS:
             raise UnsupportedFileTypeError()
 
@@ -47,8 +48,8 @@ class FileService:
             message = f'File size exceeded. {file_size} > {file_size_limit}'
             raise FileTooLargeError(message)
 
-        user_uuid = "2312452441234"
-        convesation_id = "231212312312"
+        user_uuid = str(uuid.uuid4())
+        convesation_id = str(uuid.uuid4())
 
         # user uuid as file name
         file_uuid = str(uuid.uuid4())
@@ -56,7 +57,7 @@ class FileService:
         file_key = 'upload_files/' + user_uuid + '/' + file_uuid + '.' + extension
 
         # save file to storage
-        # storage.save(file_key, file_content)
+        storage.save(file_key, file_content)
 
         # save file to db
         upload_file = UploadFile(

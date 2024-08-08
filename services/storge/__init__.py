@@ -14,7 +14,7 @@ class Storage:
         self.storage_runner = None
 
     def init_app(self, app: Flask):
-        storage_type = app_config.get('STORAGE_TYPE')
+        storage_type = app.config.get('STORAGE_TYPE')
         if storage_type == 's3':
             self.storage_runner = S3Storage(
                 app=app

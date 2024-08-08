@@ -17,9 +17,9 @@ from dashscope.common.error import (
     UnsupportedModel,
 )
 
-from core.model_runtime.callbacks.base_callback import Callback
-from core.model_runtime.entities.llm_entities import LLMResult, LLMResultChunk, LLMResultChunkDelta
-from core.model_runtime.entities.message_entities import (
+from model_runtime.callbacks.base_callback import Callback
+from model_runtime.entities.llm_entities import LLMResult, LLMResultChunk, LLMResultChunkDelta
+from model_runtime.entities.message_entities import (
     AssistantPromptMessage,
     ImagePromptMessageContent,
     PromptMessage,
@@ -30,8 +30,8 @@ from core.model_runtime.entities.message_entities import (
     ToolPromptMessage,
     UserPromptMessage,
 )
-from core.model_runtime.entities.model_entities import ModelFeature
-from core.model_runtime.errors.invoke import (
+from model_runtime.entities.model_entities import ModelFeature
+from model_runtime.errors.invoke import (
     InvokeAuthorizationError,
     InvokeBadRequestError,
     InvokeConnectionError,
@@ -39,8 +39,8 @@ from core.model_runtime.errors.invoke import (
     InvokeRateLimitError,
     InvokeServerUnavailableError,
 )
-from core.model_runtime.errors.validate import CredentialsValidateFailedError
-from core.model_runtime.model_providers.__base.large_language_model import LargeLanguageModel
+from model_runtime.errors.validate import CredentialsValidateFailedError
+from model_runtime.model_providers.__base.large_language_model import LargeLanguageModel
 
 
 class TongyiLargeLanguageModel(LargeLanguageModel):

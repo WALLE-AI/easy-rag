@@ -8,10 +8,19 @@ from flask import Flask, Response
 from flask_cors import CORS
 
 from config import app_config
+from services.storge import storage
 
 
 class StarApp(Flask):
     pass
+
+
+
+def initialize_extensions(app):
+    # Since the application instance is now created, pass it to each Flask
+    # extension instance to bind it to the Flask application instance (app)
+    storage.init_app(app)
+
 
 
 def create_flask_app_with_configs() -> Flask:
@@ -20,6 +29,7 @@ def create_flask_app_with_configs() -> Flask:
     with configs loaded from .env file
     """
     star_app = StarApp(__name__)
+    star_app.config.from_mapping(app_config.model_dump())
     return star_app
 
 def create_app():
@@ -42,6 +52,7 @@ def create_app():
         ]
 
     register_blueprints(app)
+    initialize_extensions(app)
 
     return app
 

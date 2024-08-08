@@ -143,6 +143,8 @@ api/.idea
 
 api/.env
 api/storage/*
+*.png
+*.jpg
 
 docker-legacy/volumes/app/storage/*
 docker-legacy/volumes/db/data/*

@@ -3,16 +3,16 @@ from typing import Optional
 
 import dashscope
 
-from core.model_runtime.entities.model_entities import PriceType
-from core.model_runtime.entities.text_embedding_entities import (
+from model_runtime.entities.model_entities import PriceType
+from model_runtime.entities.text_embedding_entities import (
     EmbeddingUsage,
     TextEmbeddingResult,
 )
-from core.model_runtime.errors.validate import CredentialsValidateFailedError
-from core.model_runtime.model_providers.__base.text_embedding_model import (
+from model_runtime.errors.validate import CredentialsValidateFailedError
+from model_runtime.model_providers.__base.text_embedding_model import (
     TextEmbeddingModel,
 )
-from core.model_runtime.model_providers.tongyi._common import _CommonTongyi
+from model_runtime.model_providers.tongyi._common import _CommonTongyi
 
 
 class TongyiTextEmbeddingModel(_CommonTongyi, TextEmbeddingModel):

@@ -1,3 +1,5 @@
+from pydantic_settings import SettingsConfigDict
+
 from config.deloy_config import DeploymentConfig
 from config.file_config import FileUploadConfig
 from config.storge import MiddlewareConfig
@@ -10,5 +12,14 @@ class AppConfig(
         DeploymentConfig,
         MiddlewareConfig
 ):
+    model_config = SettingsConfigDict(
+        # read from dotenv format config file
+        env_file='.env',
+        env_file_encoding='utf-8',
+        frozen=True,
+
+        # ignore extra attributes
+        extra='ignore',
+    )
     pass
 

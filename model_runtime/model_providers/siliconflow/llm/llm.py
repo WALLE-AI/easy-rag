@@ -1,9 +1,9 @@
 from collections.abc import Generator
 from typing import Optional, Union
 
-from core.model_runtime.entities.llm_entities import LLMResult
-from core.model_runtime.entities.message_entities import PromptMessage, PromptMessageTool
-from core.model_runtime.model_providers.openai_api_compatible.llm.llm import OAIAPICompatLargeLanguageModel
+from model_runtime.entities.llm_entities import LLMResult
+from model_runtime.entities.message_entities import PromptMessage, PromptMessageTool
+from model_runtime.model_providers.openai_api_compatible.llm.llm import OAIAPICompatLargeLanguageModel
 
 
 class SiliconflowLargeLanguageModel(OAIAPICompatLargeLanguageModel):

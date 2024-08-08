@@ -10,7 +10,6 @@ from services.storge.base_storage import BaseStorage
 class AliyunStorage(BaseStorage):
     """Implementation for aliyun storage.
     """
-
     def __init__(self, app: Flask):
         super().__init__(app)
 

@@ -12,4 +12,4 @@ class FileTooLargeError(BaseServiceError):
 
 
 class UnsupportedFileTypeError(BaseServiceError):
-    pass
+    description = "{message}"
