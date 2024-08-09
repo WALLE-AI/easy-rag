@@ -12,10 +12,6 @@ from utils.error.file_error import UnsupportedFileTypeError, FileTooLargeError
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg']
 IMAGE_EXTENSIONS.extend([ext.upper() for ext in IMAGE_EXTENSIONS])
 
-ALLOWED_EXTENSIONS = ['txt', 'markdown', 'md', 'pdf', 'html', 'htm', 'xlsx', 'xls', 'docx', 'csv']
-UNSTRUCTURED_ALLOWED_EXTENSIONS = ['txt', 'markdown', 'md', 'pdf', 'html', 'htm', 'xlsx', 'xls',
-                                   'docx', 'csv', 'eml', 'msg', 'pptx', 'ppt', 'xml', 'epub']
-
 PREVIEW_WORDS_LIMIT = 3000
 
 
