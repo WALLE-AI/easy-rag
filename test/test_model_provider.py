@@ -15,6 +15,11 @@ def test_provider_credentials_validate():
     print(factory)
 
 
+def test_model_proveder():
+    provider_instance = ModelProviderFactory().get_provider_instance('openrouter')
+    model_type_instance = provider_instance.get_model_instance(ModelType.LLM)
+    print(model_type_instance)
+
 
 def test_get_models():
     factory = ModelProviderFactory()
