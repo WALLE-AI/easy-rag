@@ -12,9 +12,8 @@ upload_config_fields = {
 }
 
 file_fields = {
-    'user_uuid': fields.String,
+    'id': fields.String,
     'name': fields.String,
-    "name_id":fields.String,
     'size': fields.Integer,
     'extension': fields.String,
     'mime_type': fields.String,

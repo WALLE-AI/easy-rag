@@ -11,7 +11,6 @@ from controllers.utils.error import ConversationNotExistsError, ConversationComp
 from model_runtime.errors.invoke import InvokeError
 from services.file_service import FileService
 from services.models_service import ModelService
-from services.storge import storage
 from utils.error.error import ProviderTokenNotInitError, QuotaExceededError, ModelCurrentlyNotSupportError, \
     AppInvokeQuotaExceededError
 from utils.libs.helper import compact_generate_response
@@ -29,8 +28,6 @@ class ChatImageMessageApi(Resource):
         args = parser.parse_args()
 
         try:
-            response_dict = {"hello":"world"}
-            # image_id = 'upload_files/' + args.get("user_uuid") + '/' + args.get("image_id") + '.' + args.get("extension")
             try:
                 data = FileService.get_public_image_preview(args.get("image_id"))
             except FileNotFoundError:
