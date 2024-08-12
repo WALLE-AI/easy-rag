@@ -159,7 +159,7 @@ def generate_text_hash(text: str) -> str:
     return sha256(hash_text.encode()).hexdigest()
 
 
-def compact_generate_response(response: Union[dict, RateLimitGenerator]) -> Response:
+def compact_generate_response(response) -> Response:
     if isinstance(response, dict):
         return Response(response=json.dumps(response), status=200, mimetype='application/json')
     else:

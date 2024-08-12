@@ -1,5 +1,6 @@
 from pydantic_settings import SettingsConfigDict
 
+from config.database_config import DatabaseConfig
 from config.deloy_config import DeploymentConfig
 from config.file_config import FileUploadConfig
 from config.storge import MiddlewareConfig
@@ -10,7 +11,8 @@ class AppConfig(
         FileUploadConfig,
         PackagingInfo,
         DeploymentConfig,
-        MiddlewareConfig
+        MiddlewareConfig,
+        DatabaseConfig
 ):
     model_config = SettingsConfigDict(
         # read from dotenv format config file

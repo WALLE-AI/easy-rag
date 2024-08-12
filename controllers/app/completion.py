@@ -1,3 +1,5 @@
+import base64
+
 import loguru
 from flask_restful import Resource, reqparse
 from werkzeug.exceptions import NotFound, InternalServerError
@@ -7,38 +9,36 @@ from controllers.utils.error import ConversationNotExistsError, ConversationComp
     AppUnavailableError, ProviderNotInitializeError, ProviderQuotaExceededError, ProviderModelCurrentlyNotSupportError, \
     CompletionRequestError
 from model_runtime.errors.invoke import InvokeError
+from services.file_service import FileService
+from services.models_service import ModelService
+from services.storge import storage
 from utils.error.error import ProviderTokenNotInitError, QuotaExceededError, ModelCurrentlyNotSupportError, \
     AppInvokeQuotaExceededError
 from utils.libs.helper import compact_generate_response
 
 
-class ChatMessageApi(Resource):
+class ChatImageMessageApi(Resource):
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('inputs', type=dict, required=True, location='json')
-        parser.add_argument('query', type=str, required=True, location='json')
-        parser.add_argument('files', type=list, required=False, location='json')
+        parser.add_argument('query', type=str, required=False, location='json')
+        parser.add_argument('image_id', type=str, required=True, location='json')
         parser.add_argument('model_config', type=dict, required=True, location='json')
-        parser.add_argument('conversation_id', type=uuid_value, location='json')
-        parser.add_argument('response_mode', type=str, choices=['blocking', 'streaming'], location='json')
-        parser.add_argument('retriever_from', type=str, required=False, default='dev', location='json')
+        parser.add_argument('conversation_id', type=str, location='json')
+        parser.add_argument('response_mode', type=bool,default=False, location='json')
+        parser.add_argument('retriever', type=bool, required=False, default=False, location='json')
         args = parser.parse_args()
 
-        streaming = args['response_mode'] != 'blocking'
-        args['auto_generate_name'] = False
-
-        account = "flask_login.current_user"
-
         try:
-            response = ""
-            # response = AppGenerateService.generate(
-            #     app_model=app_model,
-            #     user=account,
-            #     args=args,
-            #     invoke_from=InvokeFrom.DEBUGGER,
-            #     streaming=streaming
-            # )
-
+            response_dict = {"hello":"world"}
+            # image_id = 'upload_files/' + args.get("user_uuid") + '/' + args.get("image_id") + '.' + args.get("extension")
+            try:
+                data = FileService.get_public_image_preview(args.get("image_id"))
+            except FileNotFoundError:
+                loguru.logger.error(f'File not found: {args.get("image_id")}')
+                return None
+            encoded_string = base64.b64encode(data).decode('utf-8')
+            image_data =  f'data:{args.get("mime_type")};base64,{encoded_string}'
+            response = ModelService.invoke_llm(image_data,args)
             return compact_generate_response(response)
         except ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
@@ -61,4 +61,4 @@ class ChatMessageApi(Resource):
             loguru.logger.info(f"internal server error.")
             raise InternalServerError()
 
-api.add_resource(ChatMessageApi, '/apps/chat-messages')
+api.add_resource(ChatImageMessageApi, '/chat-messages-image')

@@ -7,6 +7,7 @@ import loguru
 from flask import Flask, Response
 from flask_cors import CORS
 
+import services.database.postgres_db
 from config import app_config
 from services.storge import storage
 
@@ -20,6 +21,7 @@ def initialize_extensions(app):
     # Since the application instance is now created, pass it to each Flask
     # extension instance to bind it to the Flask application instance (app)
     storage.init_app(app)
+    services.database.postgres_db.init_app(app)
 
 
 
@@ -60,6 +62,7 @@ def create_app():
 # register blueprint routers
 def register_blueprints(app):
     from controllers.file import bp as files_bp
+    from controllers.app import bp as app_bp
 
     CORS(files_bp,
          # resources={
@@ -69,6 +72,14 @@ def register_blueprints(app):
          methods=['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH']
          )
     app.register_blueprint(files_bp)
+
+    CORS(app_bp,
+         allow_headers=['Content-Type', 'Authorization'],
+         methods=['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH'],
+         expose_headers=['X-Version', 'X-Env']
+         )
+
+    app.register_blueprint(app_bp)
 
 
 app = create_app()
