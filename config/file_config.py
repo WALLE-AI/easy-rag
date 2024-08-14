@@ -2,6 +2,13 @@ from pydantic import  Field, NonNegativeInt
 from pydantic_settings import BaseSettings
 
 
+class ImageFormatConfig(BaseSettings):
+    MULTIMODAL_SEND_IMAGE_FORMAT: str = Field(
+        description='multi model send image format, support base64, url, default is base64',
+        default='base64',
+    )
+
+
 class FileUploadConfig(BaseSettings):
     """
     File Uploading configs

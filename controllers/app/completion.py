@@ -27,16 +27,15 @@ class ChatImageMessageApi(Resource):
         parser.add_argument('retriever', type=bool, required=False, default=False, location='json')
         args = parser.parse_args()
 
+
         try:
             try:
-                data = FileService.get_public_image_preview(args.get("image_id"))
+                response = ModelService.invoke_llm(args)
             except FileNotFoundError:
                 loguru.logger.error(f'File not found: {args.get("image_id")}')
                 return None
-            encoded_string = base64.b64encode(data).decode('utf-8')
-            image_data =  f'data:{args.get("mime_type")};base64,{encoded_string}'
-            response = ModelService.invoke_llm(image_data,args)
             return compact_generate_response(response)
+
         except ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
         except ConversationCompletedError:
