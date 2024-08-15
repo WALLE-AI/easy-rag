@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from model_runtime.entities.message_entities import AssistantPromptMessage, PromptMessage
 from model_runtime.entities.model_entities import ModelUsage, PriceInfo
+from model_runtime.utils.encoders import jsonable_encoder
 
 
 class LLMMode(Enum):
@@ -62,6 +63,10 @@ class LLMUsage(ModelUsage):
             currency='USD',
             latency=0.0
         )
+
+    def to_dict(self) -> dict:
+        return jsonable_encoder(self)
+
 
 
 class LLMResult(BaseModel):
