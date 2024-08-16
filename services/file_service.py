@@ -11,6 +11,7 @@ from config import app_config
 from services.database.postgres_db import db
 from services.db_model.uploadfile import UploadFile
 from services.storge import storage
+from services.utils.upload_file_parser import UploadFileParser
 from utils.error.file_error import UnsupportedFileTypeError, FileTooLargeError
 
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg']
@@ -94,6 +95,6 @@ class FileService:
         if extension.lower() not in IMAGE_EXTENSIONS:
             raise UnsupportedFileTypeError()
 
-        generator = storage.load(upload_file.key)
+        imagebase64 = UploadFileParser.get_image_data(upload_file)
 
-        return generator, upload_file.mime_type
+        return imagebase64, upload_file.mime_type

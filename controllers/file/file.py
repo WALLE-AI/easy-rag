@@ -3,9 +3,9 @@ from flask import request
 from flask_restful import Resource, marshal_with
 
 from config import app_config
+from controllers.entities.file_entity import file_fields, upload_config_fields
 from controllers.file import api
 from services.file_service import FileService
-from utils.entity.file_entity import file_fields, upload_config_fields
 from utils.error.error import NoFileUploadedError, TooManyFilesError, UnsupportedFileTypeError
 from utils.error.file_error import FileTooLargeError
 

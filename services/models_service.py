@@ -1,5 +1,8 @@
 import json
 import os
+import uuid
+
+import loguru
 
 from controllers.entities.app_generator import AppGeneratorMessage
 from entities.provider_configuration import ProviderModelBundle, ProviderConfiguration
@@ -20,24 +23,38 @@ class ModelService:
         pass
 
     @classmethod
-    def post_messages_generator(cls, response):
+    def post_messages_generator(cls, args,response):
+        message_id = str(uuid.uuid4())
+        message_content = ""
         for text in response:
-            if text.delta.usage:
+            ##finsh_reason获取usage内容
+            if text.delta.finish_reason == "stop":
+                usage_info_dict = text.delta.usage.to_dict()
+                message_content += text.delta.message.content
                 app_generator = AppGeneratorMessage(
+                    message_id = message_id,
+                    conversation_id=args.get("conversation_id"),
                     answer=text.delta.message.content,
-                    usgae = text.delta.usage.to_dict()
+                    usage=usage_info_dict
                 )
+                ##TODO:当前message保持在数据库中
+                loguru.logger.info(f"message_content:{message_content}")
                 yield f'data: {app_generator}\n\n'
             else:
+                message_content += text.delta.message.content
                 app_generator = AppGeneratorMessage(
+                    message_id=message_id,
+                    conversation_id=args.get("conversation_id"),
                     answer=text.delta.message.content
                 )
                 yield f'data: {app_generator}\n\n'
 
 
     @classmethod
-    def post_messages_direct_output(cls,response):
+    def post_messages_direct_output(cls,args,response):
         app_generator = AppGeneratorMessage(
+                message_id=str(uuid.uuid4()),
+                conversation_id=args.get("conversation_id"),
                 answer=response.message.content,
                 usage = response.usage.to_dict()
         )
@@ -114,6 +131,6 @@ class ModelService:
             model_parameters=model_config['model_parameters']
         )
         if args.get('response_mode')['stream']:
-            return cls.post_messages_generator(response)
+            return cls.post_messages_generator(args,response)
         else:
-            return cls.post_messages_direct_output(response)
+            return cls.post_messages_direct_output(args,response)
