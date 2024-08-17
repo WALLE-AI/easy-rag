@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import uuid
 
 import loguru
@@ -8,10 +9,13 @@ from controllers.entities.app_generator import AppGeneratorMessage
 from entities.provider_configuration import ProviderModelBundle, ProviderConfiguration
 from entities.provider_entities import SystemConfiguration, CustomConfiguration, CustomProviderConfiguration
 from model_manager import ModelInstance
+from model_runtime.entities.llm_entities import LLMResult
 from model_runtime.entities.message_entities import SystemPromptMessage, UserPromptMessage, ImagePromptMessageContent, \
     TextPromptMessageContent
 from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
+from prompt.utils.PromptTemplateParser import PromptTemplateParser
+from prompt.utils.prompt_message_util import PromptMessageUtil
 from services.database.postgres_db import db
 from services.db_model.message import Message
 from services.utils.upload_file_parser import UploadFileParser
@@ -24,26 +28,30 @@ class ModelService:
     def __init__(self):
         pass
     @classmethod
-    def init_message_db(cls,args):
+    def _save_message_db(cls,args,llm_result,prompt_messages):
         model_config = args.get("model_config")
+        usage = llm_result.usage
         message = Message(
             query = args.get("query"),
             model_provider = model_config["provider"],
             model_id = model_config["name"],
             conversation_id = args.get("conversation_id"),
             file_id =args.get("file_id"),
-            message= "",
+            message= PromptMessageUtil.prompt_messages_to_prompt_for_saving(
+            "chat",
+            prompt_messages),
             from_account_id=args.get("account_id"),
-            message_tokens = 0,
-            message_unit_price = 0,
-            message_price_unit = 0,
-            answer = "",
-            answer_tokens = 0,
-            answer_unit_price = 0,
-            answer_price_unit = 0,
-            provider_response_latency = 0,
-            total_price = 0,
-            currency = 'USD',
+            message_tokens = usage.prompt_tokens,
+            message_unit_price = usage.prompt_unit_price,
+            message_price_unit = usage.prompt_price_unit,
+            answer = PromptTemplateParser.remove_template_variables(llm_result.message.content.strip()) \
+            if llm_result.message.content else '',
+            answer_tokens = usage.completion_tokens,
+            answer_unit_price = usage.completion_unit_price,
+            answer_price_unit = usage.completion_price_unit,
+            provider_response_latency = usage.latency,
+            total_price = usage.total_price,
+            currency = usage.currency,
         )
         db.session.add(message)
         db.session.commit()
@@ -66,6 +74,8 @@ class ModelService:
                 ##TODO:当前message保持在数据库中
                 loguru.logger.info(f"message_content:{message_content}")
                 yield f'data: {app_generator}\n\n'
+                text.delta.message.content = message_content
+                cls._save_message_db(args,text.delta,text.prompt_messages)
             else:
                 message_content += text.delta.message.content
                 app_generator = AppGeneratorMessage(
@@ -78,6 +88,8 @@ class ModelService:
 
     @classmethod
     def post_messages_direct_output(cls,args,response):
+        ##save message db
+        cls._save_message_db(args,response,response.prompt_messages)
         app_generator = AppGeneratorMessage(
                 message_id=str(uuid.uuid4()),
                 conversation_id=args.get("conversation_id"),
@@ -108,8 +120,6 @@ class ModelService:
 
     @classmethod
     def invoke_llm(cls, args):
-        ##初始化message db
-        cls.init_message_db(args)
         ##获取client key值
         credentials = cls.get_env_credentials(args)
         model_config = args.get("model_config")
