@@ -19,7 +19,8 @@ class ChatImageMessageApi(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument('query', type=str, required=False, location='json')
-        parser.add_argument('image_id', type=str, required=True, location='json')
+        parser.add_argument('account_id', type=str, required=True, location='json')
+        parser.add_argument('file_id', type=str, required=True, location='json')
         parser.add_argument('model_config', type=dict, required=True, location='json')
         parser.add_argument('conversation_id', type=str, location='json')
         parser.add_argument('pre_prompt', type=str, required=False,location='json')
@@ -32,7 +33,7 @@ class ChatImageMessageApi(Resource):
                 response = ModelService.invoke_llm(args)
                 return compact_generate_response(response)
             except FileNotFoundError:
-                loguru.logger.error(f'File not found: {args.get("image_id")}')
+                loguru.logger.error(f'File not found: {args.get("file_id")}')
                 return None
 
 

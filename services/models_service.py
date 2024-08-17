@@ -12,6 +12,8 @@ from model_runtime.entities.message_entities import SystemPromptMessage, UserPro
     TextPromptMessageContent
 from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
+from services.database.postgres_db import db
+from services.db_model.message import Message
 from services.utils.upload_file_parser import UploadFileParser
 from utils.models.provider import ProviderType
 
@@ -21,6 +23,30 @@ from utils.models.provider import ProviderType
 class ModelService:
     def __init__(self):
         pass
+    @classmethod
+    def init_message_db(cls,args):
+        model_config = args.get("model_config")
+        message = Message(
+            query = args.get("query"),
+            model_provider = model_config["provider"],
+            model_id = model_config["name"],
+            conversation_id = args.get("conversation_id"),
+            file_id =args.get("file_id"),
+            message= "",
+            from_account_id=args.get("account_id"),
+            message_tokens = 0,
+            message_unit_price = 0,
+            message_price_unit = 0,
+            answer = "",
+            answer_tokens = 0,
+            answer_unit_price = 0,
+            answer_price_unit = 0,
+            provider_response_latency = 0,
+            total_price = 0,
+            currency = 'USD',
+        )
+        db.session.add(message)
+        db.session.commit()
 
     @classmethod
     def post_messages_generator(cls, args,response):
@@ -82,10 +108,13 @@ class ModelService:
 
     @classmethod
     def invoke_llm(cls, args):
+        ##初始化message db
+        cls.init_message_db(args)
+        ##获取client key值
         credentials = cls.get_env_credentials(args)
         model_config = args.get("model_config")
-        if args.get("image_id"):
-            image_content = UploadFileParser.get_image_data_from_upload_id(args.get("image_id"))
+        if args.get("file_id"):
+            image_content = UploadFileParser.get_image_data_from_upload_id(args.get("file_id"))
         else:
             image_content = ""
         provider_instance = ModelProviderFactory().get_provider_instance(model_config['provider'])
