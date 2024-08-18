@@ -68,7 +68,7 @@ def test_invoke_model_tongyi():
     response = model.invoke(
         model='qwen-turbo',
         credentials={
-            'dashscope_api_key': "sk-9ab527f5d295447fa80b8710e5797a43"
+            'dashscope_api_key': os.environ.get('TONGYI_DASHSCOPE_API_KEY')
         },
         prompt_messages=[
             UserPromptMessage(
