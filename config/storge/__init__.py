@@ -2,6 +2,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 from config.storge.aliyun_config import AliyunOSSStorageConfig
+from config.storge.s3_config import S3StorageConfig
 
 
 class StorageConfig(BaseSettings):
@@ -23,6 +24,8 @@ class MiddlewareConfig(
     # configs of storage and storage providers
     StorageConfig,
     AliyunOSSStorageConfig,
+    S3StorageConfig
+
 
 ):
     pass

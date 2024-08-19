@@ -52,6 +52,7 @@ class ModelService:
             provider_response_latency = usage.latency,
             total_price = usage.total_price,
             currency = usage.currency,
+            file_type=args.get("file_type")
         )
         db.session.add(message)
         db.session.commit()
@@ -124,7 +125,8 @@ class ModelService:
         credentials = cls.get_env_credentials(args)
         model_config = args.get("model_config")
         if args.get("file_id"):
-            image_content = UploadFileParser.get_image_data_from_upload_id(args.get("file_id"))
+            image_content,file_type = UploadFileParser.get_image_data_from_upload_id(args.get("file_id"))
+            args['file_type'] = file_type
         else:
             image_content = ""
         provider_instance = ModelProviderFactory().get_provider_instance(model_config['provider'])

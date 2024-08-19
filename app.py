@@ -24,7 +24,6 @@ def initialize_extensions(app):
     services.database.postgres_db.init_app(app)
 
 
-
 def create_flask_app_with_configs() -> Flask:
     """
     create a raw flask app

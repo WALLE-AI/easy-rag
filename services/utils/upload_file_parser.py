@@ -28,7 +28,7 @@ class UploadFileParser:
 
         if not upload_file:
             raise NotFound("File not found or signature is invalid")
-        return cls.get_image_data(upload_file)
+        return cls.get_image_data(upload_file),upload_file.mime_type
 
     @classmethod
     def get_image_data(cls, upload_file, force_url: bool = False) -> Optional[str]:

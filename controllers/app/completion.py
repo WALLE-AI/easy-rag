@@ -36,7 +36,6 @@ class ChatImageMessageApi(Resource):
                 loguru.logger.error(f'File not found: {args.get("file_id")}')
                 return None
 
-
         except ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
         except ConversationCompletedError:

@@ -71,7 +71,7 @@ class FileService:
             mime_type=file.mimetype,
             created_by_role='account',
             created_by=user_uuid,
-            created_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
+            created_at=datetime.datetime.now(),
             used=False,
             hash=hashlib.sha3_256(file_content).hexdigest()
         )
