@@ -7,8 +7,9 @@ import loguru
 from flask import Flask, Response
 from flask_cors import CORS
 
-import services.database.postgres_db
 from config import app_config
+from services.database import migrate_db, postgres_db
+from services.database.postgres_db import db
 from services.storge import storage
 
 
@@ -21,7 +22,8 @@ def initialize_extensions(app):
     # Since the application instance is now created, pass it to each Flask
     # extension instance to bind it to the Flask application instance (app)
     storage.init_app(app)
-    services.database.postgres_db.init_app(app)
+    postgres_db.init_app(app)
+    migrate_db.init(app,db)
 
 
 def create_flask_app_with_configs() -> Flask:
