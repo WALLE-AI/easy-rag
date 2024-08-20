@@ -19,12 +19,12 @@ class ChatImageMessageApi(Resource):
     def post(self):
         parser = reqparse.RequestParser()
         parser.add_argument('query', type=str, required=False, location='json')
-        parser.add_argument('account_id', type=str, required=True, location='json')
+        parser.add_argument('account_id', type=str, required=False, location='json')
         parser.add_argument('file_id', type=str, required=True, location='json')
         parser.add_argument('model_config', type=dict, required=True, location='json')
-        parser.add_argument('conversation_id', type=str, location='json')
-        parser.add_argument('pre_prompt', type=str, required=False,location='json')
-        parser.add_argument('response_mode', type=dict,default=False, location='json')
+        parser.add_argument('conversation_id', type=str,required=False, location='json')
+        parser.add_argument('system_prompt', type=dict, required=False,location='json')
+        parser.add_argument('response_mode', type=dict,default=True, location='json')
         parser.add_argument('retriever', type=bool, required=False, default=False, location='json')
         args = parser.parse_args()
 

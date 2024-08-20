@@ -31,6 +31,18 @@ def create_flask_app_with_configs() -> Flask:
     """
     star_app = StarApp(__name__)
     star_app.config.from_mapping(app_config.model_dump())
+    ##set api key env
+    for key, value in star_app.config.items():
+        if key == "OPENROUTER_API_KEY":
+            loguru.logger.info(f"set openrouter api key")
+            os.environ[key] = value
+        elif key == "TONGYI_DASHSCOPE_API_KEY":
+            loguru.logger.info(f"set tongyi api key")
+            os.environ[key] = value
+        elif key == "SILICONFLOW_API_KEY":
+            loguru.logger.info(f"set siliconflow api key")
+            os.environ[key] = value
+    
     return star_app
 
 def create_app():

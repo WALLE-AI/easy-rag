@@ -1,5 +1,6 @@
 from pydantic_settings import SettingsConfigDict
 
+from config.api_key_config import ApiKeyInfo
 from config.database_config import DatabaseConfig
 from config.deloy_config import DeploymentConfig
 from config.file_config import FileUploadConfig, ImageFormatConfig
@@ -13,7 +14,8 @@ class AppConfig(
         DeploymentConfig,
         MiddlewareConfig,
         DatabaseConfig,
-        ImageFormatConfig
+        ImageFormatConfig,
+        ApiKeyInfo
 ):
     model_config = SettingsConfigDict(
         # read from dotenv format config file

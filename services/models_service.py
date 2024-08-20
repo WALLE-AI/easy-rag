@@ -14,6 +14,7 @@ from model_runtime.entities.message_entities import SystemPromptMessage, UserPro
     TextPromptMessageContent
 from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
+from prompt.starchat_qs_prompt import STARCHAT_QS_CHAT_PROMPT_DEFAULT
 from prompt.utils.PromptTemplateParser import PromptTemplateParser
 from prompt.utils.prompt_message_util import PromptMessageUtil
 from services.database.postgres_db import db
@@ -129,6 +130,11 @@ class ModelService:
             args['file_type'] = file_type
         else:
             image_content = ""
+        if args.get("system_prompt")['use_prompt'] and args.get("system_prompt")['prompt']:
+            args["system_prompt"] = args.get("system_prompt")['prompt']
+        else:
+            ##默认系统的
+            args["system_prompt"] = STARCHAT_QS_CHAT_PROMPT_DEFAULT
         provider_instance = ModelProviderFactory().get_provider_instance(model_config['provider'])
         model_type_instance = provider_instance.get_model_instance(ModelType.LLM)
         provider_model_bundle = ProviderModelBundle(
@@ -154,7 +160,7 @@ class ModelService:
         response = model_instance.invoke_llm(
             prompt_messages=[
                 SystemPromptMessage(
-                    content=args.get("pre_prompt"),
+                    content=args.get("system_prompt"),
                 ),
                 UserPromptMessage(
                     content=[
