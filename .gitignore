@@ -110,6 +110,7 @@ ENV/
 env.bak/
 venv.bak/
 .conda/
+*.csv
 
 # Spyder project settings
 .spyderproject
