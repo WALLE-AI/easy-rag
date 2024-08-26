@@ -4,7 +4,6 @@ from typing import Optional, Union
 from model_runtime.entities.llm_entities import LLMResult
 from model_runtime.entities.message_entities import PromptMessage, PromptMessageTool
 from model_runtime.entities.model_entities import AIModelEntity
-
 from model_runtime.model_providers.openai_api_compatible.llm.llm import OAIAPICompatLargeLanguageModel
 
 

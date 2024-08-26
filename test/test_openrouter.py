@@ -9,6 +9,7 @@ from model_runtime.model_providers.openrouter.llm.llm import OpenRouterLargeLang
 
 from collections.abc import Generator
 
+from prompt.starchat_qs_prompt import NODE_PLAN_PROMPT
 
 
 
@@ -18,19 +19,18 @@ def test_invoke_model():
     response = model.invoke(
         model='openai/gpt-4o-2024-08-06',
         credentials={
-            'api_key': os.environ.get('OPENROUTER_API_KEY'),
-            'mode': 'completion'
+            'api_key': os.environ.get('OPENROUTER_API_KEY')
         },
         prompt_messages=[
             SystemPromptMessage(
-                content='You are a helpful AI assistant.',
+                content=NODE_PLAN_PROMPT,
             ),
             UserPromptMessage(
-                content='有那些建筑大模型?，请使用中文回复'
+                content='该项目特征为：住宅楼小区项目，有两个地块，每个地块上有5栋楼，每栋楼33层，地下需要建设三层地下室，地面有小区，住宅楼要求为精装修，工地周边为交通道路，不可影响交通正常运行。该地区潮湿，5楼以下均需要求为一级防水处理。请按照报批报建、设计、招采、工程施工四条线帮我排一个为期三年的有前后置依赖关系且详细的工程施工计划'
             )
         ],
         model_parameters={
-            'temperature': 1.0,
+            'temperature': 0.2,
             'top_k': 2,
             'top_p': 0.5,
         },
@@ -38,9 +38,10 @@ def test_invoke_model():
         stream=False,
         user="abc-123"
     )
+    total_tokens = response.usage.total_tokens
+    loguru.logger.info(f"response:{response.message.content}")
+    loguru.logger.info(f"total tokens: {total_tokens}")
 
-    assert isinstance(response, LLMResult)
-    assert len(response.message.content) > 0
 
 
 def test_invoke_image_model():

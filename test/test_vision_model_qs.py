@@ -4,6 +4,7 @@ label:临边洞口，高空跌落，安全帽，电气安全
 model:GPT4-o/mini,yi-version, Claude-3.5，qwen-max
 '''
 import os
+from decimal import Decimal
 from io import BytesIO
 
 import loguru
@@ -23,9 +24,9 @@ from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT
 from utils.models.provider import ProviderType
 
 model_list_openrouter = [
+"anthropic/claude-3.5-sonnet",
 "openai/gpt-4o-mini-2024-07-18",
     "01-ai/yi-vision",
-    "anthropic/claude-3.5-sonnet",
 ]
 
 model_list_qwen = [
@@ -33,8 +34,8 @@ model_list_qwen = [
 ]
 
 input_args = {
-    "model_config": {"model_parameters": {}, "mode": "chat",
-                     "name": "openai/gpt-4o-mini-2024-07-18", "provider": "openrouter"},
+    "model_config": {"model_parameters": {"temperature": 0.2}, "mode": "chat",
+                     "name": "01-ai/yi-vision", "provider": "openrouter"},
 }
 import pandas as pd
 class TestVlmSafeOutPut(BaseModel):
@@ -48,10 +49,10 @@ class TestVlmSafeOutPut(BaseModel):
     prompt:str="你是一个智能助手"
     response: str="shdhshadhsahd"
     total_tokens: int=122343
-    total_price:float=0.01
+    total_price:Decimal=0.01
     currency:str = "USD"
     score:float=0.0
-    human_review:str="dsgdgsdhs"
+    human_review:str=""
 
     def to_dict(self) -> dict:
         return jsonable_encoder(self)
@@ -63,7 +64,6 @@ def read_image_file():
     for filename in os.listdir(folder_path):
         # 构建文件的完整路径
         file_path = os.path.join(folder_path, filename)
-
         # 检查文件是否是图片（这里以常见的图片格式为例）
         if file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff')):
             with Image.open(file_path) as img:
@@ -151,7 +151,8 @@ def model_execute(image_base64):
 
 
         ],
-        stream=False
+        stream=False,
+        model_parameters=model_config['model_parameters']
     )
     loguru.logger.info(f"response:{response.message.content}")
     return response
@@ -186,10 +187,12 @@ def llm_execute():
         image_name,image_format = key.split(".")
         input_args['image_name'] =key
         input_args['description'] = image_name
-        mime_type = "image/"+image_format
-        base64_string = image_to_base64(value,mime_type)
-        result = model_execute(base64_string)
-        reponse_post_process(result,response_data_list,input_args)
-        write_file(response_data_list)
+        mime_type = "image/" + image_format
+        base64_string = image_to_base64(value, mime_type)
+        for model_name in model_list_openrouter:
+            input_args['model_config']["name"] = model_name
+            result = model_execute(base64_string)
+            reponse_post_process(result,response_data_list,input_args)
+            write_file(response_data_list)
 
 
