@@ -30,3 +30,31 @@ services:
       interval: 1s
       timeout: 3s
       retries: 30
+    # Chroma vector database
+  chroma:
+    image: dhub.kubesre.xyz/chromadb/chroma:0.5.5 
+    container_name: starchat-chroma
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - /home/ziwei/gaojing/LLM/database/data/chroma_data:/chroma/chroma
+    environment:
+      CHROMA_SERVER_AUTHN_CREDENTIALS: ${CHROMA_SERVER_AUTHN_CREDENTIALS:-starchat123456}
+      CHROMA_SERVER_AUTHN_PROVIDER: ${CHROMA_SERVER_AUTHN_PROVIDER:-chromadb.auth.token_authn.TokenAuthenticationServerProvider}
+      IS_PERSISTENT: ${CHROMA_IS_PERSISTENT:-TRUE}
+
+    # The redis cache.
+  redis:
+    image: dhub.kubesre.xyz/redis:6-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    container_name: starchat-redis
+    volumes:
+      # Mount the redis data directory to the container.
+      - /home/ziwei/gaojing/LLM/database/data/redis_data:/data
+    # Set the redis password when startup redis server.
+    command: redis-server --requirepass ${REDIS_PASSWORD:-difyai123456}
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]

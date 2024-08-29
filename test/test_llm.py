@@ -59,7 +59,10 @@ def test_llm():
         ],
         stream=True
     )
-    loguru.logger.info(f"response:{response.message.content}")
+    message_content=""
+    for text in response:
+        message_content += text.delta.message.content
+    loguru.logger.info(f"reponse content:{message_content}")
 
 
 def test_invoke_model_tongyi():

@@ -9,8 +9,7 @@ from model_runtime.model_providers.openrouter.llm.llm import OpenRouterLargeLang
 
 from collections.abc import Generator
 
-from prompt.starchat_qs_prompt import NODE_PLAN_PROMPT
-
+from prompt.starchat_qs_prompt import NODE_PLAN_PROMPT, TEST_PROMPT
 
 
 def test_invoke_model():
@@ -23,10 +22,10 @@ def test_invoke_model():
         },
         prompt_messages=[
             SystemPromptMessage(
-                content=NODE_PLAN_PROMPT,
+                content=TEST_PROMPT,
             ),
             UserPromptMessage(
-                content='该项目特征为：住宅楼小区项目，有两个地块，每个地块上有5栋楼，每栋楼33层，地下需要建设三层地下室，地面有小区，住宅楼要求为精装修，工地周边为交通道路，不可影响交通正常运行。该地区潮湿，5楼以下均需要求为一级防水处理。请按照报批报建、设计、招采、工程施工四条线帮我排一个为期三年的有前后置依赖关系且详细的工程施工计划'
+                content='该项目特征为：该项目为总承包项目，具有土建、钢结构、机电、幕墙、装饰装修工程等。该项目建设内容如下：1号楼为含钢结构的超高层，其地上部分33层，地下部分3层。2号楼地上部分27层，地下部分3层。3号楼地上部分29层，地下部分3层。4号楼地上部分24层，地下部分3层。5号楼地上22层，地下部分3层。6号楼地上部分29层，地下部分3层。7号楼地上部分18层，地下部分3层。8号楼地上部分14层，地下部分3层。9号楼地上部分14层，地下部分3层。10号楼地上部分13层，地下部分3层。11号楼为有钢结构的超高层，地上部分49层地下部分3层。各楼要求完成内装和外装，主体结构验收后需要开展景观园林施工。项目施工时不可影响周围建成建筑。请按照报批报建线、设计线、招采线、工程施工线四条线帮我排一个为期4年的有前后置依赖关系且详细的工程施工计划,并且给出具体项目时间，要求计划足够细致到指导施工'
             )
         ],
         model_parameters={

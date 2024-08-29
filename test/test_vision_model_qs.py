@@ -24,9 +24,8 @@ from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT
 from utils.models.provider import ProviderType
 
 model_list_openrouter = [
-"anthropic/claude-3.5-sonnet",
-"openai/gpt-4o-mini-2024-07-18",
-    "01-ai/yi-vision",
+# "openai/gpt-4o-mini-2024-07-18",
+    "qwen-vl-max",
 ]
 
 model_list_qwen = [
@@ -34,8 +33,9 @@ model_list_qwen = [
 ]
 
 input_args = {
+    "stream":True,
     "model_config": {"model_parameters": {"temperature": 0.2}, "mode": "chat",
-                     "name": "01-ai/yi-vision", "provider": "openrouter"},
+                     "name": "qwen-vl-max", "provider": "tongyi"},
 }
 import pandas as pd
 class TestVlmSafeOutPut(BaseModel):
@@ -83,7 +83,6 @@ def read_image_file():
 
 def get_execute_dir_path():
     return os.path.dirname(os.path.abspath(__file__))
-
 
 def image_to_base64(encoded_string,mime_type):
     return f'data:{mime_type};base64,{encoded_string}'
@@ -151,22 +150,34 @@ def model_execute(image_base64):
 
 
         ],
-        stream=False,
+        stream=input_args['stream'],
         model_parameters=model_config['model_parameters']
     )
-    loguru.logger.info(f"response:{response.message.content}")
+    # loguru.logger.info(f"response execute time:{response.usage.latency}")
     return response
 
-def write_file(reponse_data_list):
-    file_name= "safe_test_result.csv"
+def preproce_modem_name_char(image_name):
+    return image_name.replace('/', '')
+
+def write_file(reponse_data_list,model_name):
+    file_name= preproce_modem_name_char(model_name) + "_"+"safe_test_result.csv"
     write_path = get_execute_dir_path() +"\\" +file_name
     data =pd.DataFrame(reponse_data_list)
     loguru.logger.info(f"save file")
     data.to_csv(write_path,index=False,encoding='gb2312')
 
 def reponse_post_process(result,response_data_list,input_arg):
-    usage = result.usage
-    content = result.message.content
+    content = ""
+    if input_arg["stream"]:
+        for text in result:
+            if text.delta.finish_reason == "stop":
+                usage = text.delta.usage
+                content += text.delta.message.content
+            else:
+                content += text.delta.message.content
+    else:
+        usage = result.usage
+        content = result.message.content
     model_config = input_arg['model_config']
     data = TestVlmSafeOutPut(
             model_name =model_config["name"],
@@ -180,19 +191,50 @@ def reponse_post_process(result,response_data_list,input_arg):
             currency=usage.currency
     )
     response_data_list.append(data.to_dict())
+
+def exist_image_file(model_name):
+    '''
+    判断已经诊断过的图片
+    :return:
+    '''
+    exist_image_file_list = []
+    file_name= preproce_modem_name_char(model_name) + "_"+"safe_test_result.csv"
+    image_file_path = get_execute_dir_path() +"\\" +file_name
+    if os.path.exists(image_file_path):
+        data = pd.read_csv(image_file_path,encoding="gb2312")
+        ##存储之前已经执行的图片
+        # for index, row in data.iterrows():
+        #     exist_image_file_list.append(row.to_dict())
+        # return exist_image_file_list, data
+    else:
+        data_dict = TestVlmSafeOutPut().to_dict()
+        data = pd.DataFrame([data_dict])
+        data.to_csv(image_file_path,index=False,encoding='gb2312')
+    for index, row in data.iterrows():
+        exist_image_file_list.append(row.to_dict())
+    return exist_image_file_list, data
+
 def llm_execute():
     image_path = read_image_file()
-    response_data_list = []
-    for key,value in image_path.items():
-        image_name,image_format = key.split(".")
-        input_args['image_name'] =key
-        input_args['description'] = image_name
-        mime_type = "image/" + image_format
-        base64_string = image_to_base64(value, mime_type)
-        for model_name in model_list_openrouter:
+    for model_name in model_list_openrouter:
+        response_data_list = []
+        exist_image_file_list, data = exist_image_file(model_name)
+        if exist_image_file_list:
+            response_data_list = exist_image_file_list
+        for key,value in image_path.items():
+            loguru.logger.info(f"image name {key}")
+            image_name,image_format = key.split(".")
+            if key in data.image_name.values:
+                continue
+            input_args['image_name'] =key
+            input_args['description'] = image_name
+            mime_type = "image/" + image_format
+            base64_string = image_to_base64(value, mime_type)
             input_args['model_config']["name"] = model_name
+            ##模型执行
+            loguru.logger.info(f"llm name:{model_name},execute image: {image_name}")
             result = model_execute(base64_string)
             reponse_post_process(result,response_data_list,input_args)
-            write_file(response_data_list)
+            write_file(response_data_list,model_name)
 
 
