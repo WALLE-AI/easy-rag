@@ -37,6 +37,7 @@ class ImageTableProcess(BaseModel):
         "description":"", 隐患描述
         "correct_description":"",整改隐患描述
         "risk":"",隐患风险分析
+        type: str = "quality" 质量或者安全safe
         ##整改依据
         "correct_basic":"针对导向管未加U形筋的问题，应参照《建筑施工扣件式钢管脚手架安全技术规范》（JGJ 130 - 2011），在楼板上表面配置受力钢筋，以确保结构的稳定性和安全性。同时，结合其他相关规范和标准，如《安徽省建设项目施工现场安全风险管控标准》和《建筑施工安全生产隐患识别图集》，进一步强化施工过程中的细节管理和风险控制，确保施工质量和安全",
         "label":"0" 隐患的严重程度
@@ -52,6 +53,7 @@ class ImageTableProcess(BaseModel):
     description: str = "防水基层不平整",
     correct_description: str = "",
     risk: str = "",
+    type: str = "quality"
     correct_basic: str = "",
     label: str = "0"
 
