@@ -21,6 +21,7 @@ from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
 from model_runtime.utils.encoders import jsonable_encoder
 from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT
+from rag.entities.entity_images import ImageVLMTestOutPut
 from utils.models.provider import ProviderType
 
 model_list_openrouter = [
@@ -38,24 +39,7 @@ input_args = {
                      "name": "qwen-vl-max", "provider": "tongyi"},
 }
 import pandas as pd
-class TestVlmSafeOutPut(BaseModel):
-    """
-    Model class for provider quota configuration.
-    """
-    model_name: str="01-ai/yi-vision"
-    provider: str="openrouter"
-    image_name:str=""
-    description:str="昆明东货运站项目垂直洞口短边边长大于或等于500mm时，未在临空一侧设置高度不小于1.2m的防护栏杆密目式安全立网或工具式栏板封闭挡脚板"
-    prompt:str="你是一个智能助手"
-    response: str="shdhshadhsahd"
-    total_tokens: int=122343
-    total_price:Decimal=0.01
-    currency:str = "USD"
-    score:float=0.0
-    human_review:str=""
 
-    def to_dict(self) -> dict:
-        return jsonable_encoder(self)
 def read_image_file():
     folder_path = 'D:\\LLM\\need_product\\architecture\\building_acident_datasets\\safe'
     # folder_path = 'D:\\LLM\\need_product\\architecture\\building_acident_datasets'
@@ -179,7 +163,7 @@ def reponse_post_process(result,response_data_list,input_arg):
         usage = result.usage
         content = result.message.content
     model_config = input_arg['model_config']
-    data = TestVlmSafeOutPut(
+    data = ImageVLMTestOutPut(
             model_name =model_config["name"],
             provider=model_config["provider"],
             image_name = input_arg['image_name'],
@@ -207,7 +191,7 @@ def exist_image_file(model_name):
         #     exist_image_file_list.append(row.to_dict())
         # return exist_image_file_list, data
     else:
-        data_dict = TestVlmSafeOutPut().to_dict()
+        data_dict = ImageVLMTestOutPut().to_dict()
         data = pd.DataFrame([data_dict])
         data.to_csv(image_file_path,index=False,encoding='gb2312')
     for index, row in data.iterrows():
