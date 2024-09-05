@@ -4,6 +4,7 @@ import os
 from io import BytesIO
 
 import loguru
+import pandas as pd
 import requests
 from PIL import Image
 
@@ -15,9 +16,20 @@ from model_runtime.entities.message_entities import SystemPromptMessage, TextPro
 from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
 from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT, STARCHAT_QUALITY_TEST_PROMOPT, \
-    STARCHAT_QUALITY_TEST_PROMOPT_LABEL
-from rag.entities.entity_images import ImageTableProcess
+    STARCHAT_QUALITY_TEST_PROMOPT_LABEL, STARCHAT_QS_TEST_EVALUTE_PROMOPT, STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT, \
+    STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
+from rag.entities.entity_images import ImageTableProcess, ImageVlmQualityLabel, ImageVlmModelOutPut
 from utils.models.provider import ProviderType
+
+from openai import OpenAI
+import loguru
+
+openai_api_key = "empty"
+openai_api_base = "http://36.103.239.202:9005/v1"
+client = OpenAI(
+    api_key=openai_api_key,
+    base_url=openai_api_base,
+)
 
 input_args = {
     "stream": False,
@@ -36,6 +48,12 @@ def write_json_file(data_dict, save_file_name):
         file.write(jsonn_str_data)
 
 
+def write_file(response_data_list):
+    file_name_path = "data\\" + "quality_1000_result.csv"
+    data = pd.DataFrame(response_data_list)
+    data.to_csv(file_name_path, index=False, encoding='gb2312')
+
+
 def download_image(url, filename):
     images_dir_path = "data\\images\\" + filename
     loguru.logger.info(f"images dir path {images_dir_path}")
@@ -51,6 +69,18 @@ def download_image(url, filename):
         return False
     except IOError as e:
         loguru.logger.info(f"request io error：{e}")
+
+
+def is_url_validation(image_url):
+    ##验证url有效性
+    try:
+        # 发送GET请求获取图片内容
+        response = requests.get(image_url)
+        response.raise_for_status()  # 如果请求失败，这会抛出异常
+        return True
+    except requests.RequestException as e:
+        print(f"download image error: {e}")
+        return False
 
 
 def encode_image_base64_from_url(image_id, image_url):
@@ -112,7 +142,41 @@ def image_to_base64(image_path):
         return f'data:image/{mime_type};base64,{img_base64}'
 
 
-def model_execute(image_base64,query):
+def local_model_execute(data_dict, prompt):
+    models = client.models.list()
+    model_name = models.data[0].id
+    loguru.logger.info(f"model name {model_name}")
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[{
+            "role": "user",
+            "content": [
+                # NOTE: The prompt formatting with the image token `<image>` is not needed
+                # since the prompt will be processed automatically by the API server.
+                # {"type": "text", "text":"你是一个建筑施工行业资深的质量检查员，你能够高精度判别出施工工地中施工质量风险，请根据用户的场景图片进行高质量的回复,需要重点分析出隐患类别、质量分析、整改要求和法规依据" },
+                {"type": "text",
+                 "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": data_dict['image_oss_url'],
+                    },
+                },
+            ],
+        }],
+        stream=False
+    )
+    response_dict = ImageVlmModelOutPut(
+        prompt=prompt,
+        model_name=response.model,
+        content=response.choices[0].message.content,
+        total_tokens=response.usage.total_tokens
+    )
+    return response_dict.to_dict()
+
+
+def model_execute(data_dict, prompt):
+    image_base64 = encode_image_base64_from_url(data_dict["image_id"], data_dict['image_oss_url'])
     credentials = get_env_credentials(input_args)
     model_config = input_args["model_config"]
     provider_instance = ModelProviderFactory().get_provider_instance(model_config['provider'])
@@ -145,7 +209,7 @@ def model_execute(image_base64,query):
             UserPromptMessage(
                 content=[
                     TextPromptMessageContent(
-                        data=STARCHAT_QUALITY_TEST_PROMOPT_LABEL.format(content=query)
+                        data=prompt
                     ),
                     ImagePromptMessageContent(
                         data=image_base64
@@ -158,7 +222,13 @@ def model_execute(image_base64,query):
         model_parameters=model_config['model_parameters']
     )
     # loguru.logger.info(f"response execute time:{response.usage.latency}")
-    return response
+    response_dict = ImageVlmModelOutPut(
+        prompt=prompt,
+        model_name=response.model,
+        content=response.message.content,
+        total_tokens=response.usage.total_tokens
+    )
+    return response_dict.to_dict()
 
 
 convesation_format_human_dict = {
@@ -167,26 +237,105 @@ convesation_format_human_dict = {
 }
 convesation_format_gpt_dict = {
     "from": "gpt",
-    "value": "The scene depicts a lively plaza area with several people walking and enjoying their time. A man is standing in the plaza with his legs crossed, holding a kite in his hand. The kite has multiple sections attached to it, spread out in various directions as if ready for flight.\n\nNumerous people are scattered throughout the plaza, walking and interacting with others. Some of these individuals are carrying handbags, and others have backpacks. The image captures the casual, social atmosphere of a bustling plaza on a nice day."
+    "value": ""
 }
+
+
+def llm_result_postprocess(llm_response_content):
+    ##json的后处理
+    from json_repair import repair_json
+    json_string = repair_json(llm_response_content, return_objects=True)
+    return json_string
+
+
+def post_data_images_test_output(data_dict,prompt):
+    data = ImageVlmQualityLabel(
+        image_id=data_dict['image_id'],
+        image_oss_url=data_dict['image_oss_url'],
+        description=data_dict['description'],
+        prompt=prompt,
+        total_tokens="11234",
+        score=0.0,
+        human_review=""
+    )
+    return data.to_dict()
+
+
+def exist_image_file():
+    '''
+    判断已经诊断过的图片
+    :return:
+    '''
+    exist_image_file_list = []
+    file_name_path = "data\\" + "quality_1000_result.csv"
+    image_id_list = []
+    if os.path.exists(file_name_path):
+        data = pd.read_csv(file_name_path,encoding="gb2312")
+        ##存储之前已经执行的图片
+        # for index, row in data.iterrows():
+        #     exist_image_file_list.append(row.to_dict())
+        # return exist_image_file_list, data
+    else:
+        data_dict = ImageVlmQualityLabel().to_dict()
+        data = pd.DataFrame([data_dict])
+        data.to_csv(file_name_path,index=False,encoding='gb2312')
+    for index, row in data.iterrows():
+        exist_image_file_list.append(row.to_dict())
+        image_id_list.append(row.to_dict()['image_id'])
+    return exist_image_file_list,image_id_list
+
+def image_generator_conversation_data(data_dict):
+    tmp_data_list = []
+    q_prompt = STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT
+    a_prompt = STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
+    response_dict2 = local_model_execute(data_dict, q_prompt.replace("{content}", data_dict['description']))
+    question_dict_list = llm_result_postprocess(response_dict2['content'])
+    for question in question_dict_list:
+        convesation_format_human_dict = {
+            "from": "human",
+            "value": "{content}\n<image>"
+        }
+        convesation_format_gpt_dict = {
+            "from": "gpt",
+            "value": ""
+        }
+        convesation_format_human_dict["value"] = convesation_format_human_dict["value"].format(
+            content=question)
+        data_dict['conversations'].append(convesation_format_human_dict)
+        response_dict3 = local_model_execute(data_dict, a_prompt.format(content=question))
+        convesation_format_gpt_dict["value"] = response_dict3['content']
+        data_dict['conversations'].append(convesation_format_gpt_dict)
+    tmp_data_list.append(data_dict)
+
+
 
 
 def image_generator_conversation_index(data_json_file):
     with open(data_json_file, "r", encoding="utf-8") as file:
         data = file.read()
         data = json.loads(data)
+        loguru.logger.info(f"data size :{len(data)}")
+        image_id_list = []
+        # init_data_list,image_id_list = exist_image_file()
+        # if init_data_list:
+        #     test_data_list = init_data_list
+        prompt = STARCHAT_QS_TEST_EVALUTE_PROMOPT
         for _data in data:
             ##先根据图片生成该图片描述的问题
-            if _data['accident_label'] =="主体结构":
+            if _data['image_id'] not in image_id_list :
                 ##url
-                images_base64 = encode_image_base64_from_url(_data["image_id"], _data['image_oss_url'])
-                # images_base64 = image_to_base64(_data["image_id"])
-                q_response = model_execute(images_base64,_data['description'])
-                loguru.logger.info(f"reponse:{q_response}")
-            # temp_conversation_list.append(q_response)
-            # ##根据描述图片的问题生成对应隐患类别以及解释
-            # question = ""
-            # a_reponse = model_execute(images_base64, question)
+                loguru.logger.info(f"accident_label:{_data['accident_label']},description:{_data['description']}")
+                image_generator_conversation_data(_data)
+                ##init output_data object
+                # output_data = post_data_images_test_output(_data, prompt)
+                # response_dict1 = model_execute(_data, prompt)
+                # output_data[response_dict1['model_name']] = response_dict1['content']
+                # output_data[response_dict2['model_name']] = response_dict2['content']
+                # output_data['total_tokens'] = str(response_dict1["total_tokens"]) +";" + str(response_dict2["total_tokens"])
+                # test_data_list.append(output_data)
+                # loguru.logger.info(f"save local file .....")
+                # write_file(test_data_list)
+
 
 
 def read_xlsx_file_to_save_json(file_path):
@@ -195,14 +344,15 @@ def read_xlsx_file_to_save_json(file_path):
     data = data.to_pandas()
     # data = pd.read_excel(file_path,sheet_name="Sheet1")
     # data.index.names = ["单号","项目id","照片","隐患部位","标准隐患编号","隐患内容","company_hidden_id","name","类型"]
-    data = data.head(51)
+    data = data.head(5000)
     data_save_list = []
     for index, row_data in data.iterrows():
         data_dict = row_data.to_dict()
         if data_dict['类型'] == "质量":
             image_name = data_dict['照片'].split("https://zhgd-prod-oss.oss-cn-shenzhen.aliyuncs.com/")[-1]
             ##download image dir
-            if download_image(data_dict['照片'], image_name):
+            # is_download= download_image(data_dict['照片'], image_name)
+            if is_url_validation(data_dict['照片']):
                 data_entity = ImageTableProcess(
                     id=str(index),
                     image_id=image_name,
@@ -219,16 +369,18 @@ def read_xlsx_file_to_save_json(file_path):
                     label="0"
                 )
                 data_save_list.append(data_entity.to_dict())
-            if not index % 50 and index != 0:
+                loguru.logger.info(f"data_save_list:{len(data_save_list)}")
+            if len(data_save_list) != 0 and len(data_save_list)==100:
                 save_file_name = "data/images_table_format_" + str(index) + ".json"
                 write_json_file(data_save_list, save_file_name)
                 ##每超过10W，保存一次，清洗之前的数组中数据
                 data_save_list.clear()
+                break
 
 
 def preprocee_table_images_data():
     file_path = "D:\\LLM\\need_product\\architecture\\images_table_05.xlsx"
-    json_file_path = "data\\images_table_format_50.json"
+    json_file_path = "data\\images_table_format_246.json"
     image_root = "data\\images\\"
     image_generator_conversation_index(json_file_path)
     # read_xlsx_file_to_save_json(file_path)

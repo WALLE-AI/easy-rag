@@ -6,6 +6,29 @@ from pydantic import BaseModel
 from model_runtime.utils.encoders import jsonable_encoder
 
 
+
+class ImageVlmModelOutPut(BaseModel):
+    prompt: str = "你是一个有用的助手"
+    model_name:str="dsdsad"
+    content: str = "shdhshadhsahd"
+    total_tokens: int = 122343
+    def to_dict(self) -> dict:
+        return jsonable_encoder(self)
+
+
+class ImageVlmQualityLabel(BaseModel):
+    image_id: str = ""
+    image_oss_url: str
+    description: str = ""
+    prompt: str = "你是一个有用的助手"
+    total_tokens: str = "122343"
+    score: float = 0.0
+    human_review: str = ""
+
+    def to_dict(self) -> dict:
+        return jsonable_encoder(self)
+
+
 class ImageVLMTestOutPut(BaseModel):
     """
     Model class for provider quota configuration.

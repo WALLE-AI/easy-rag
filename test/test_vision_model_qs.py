@@ -19,6 +19,7 @@ from model_runtime.entities.message_entities import SystemPromptMessage, UserPro
     ImagePromptMessageContent
 from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
+from model_runtime.model_providers.tongyi.llm.llm import TongyiLargeLanguageModel
 from model_runtime.utils.encoders import jsonable_encoder
 from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT
 from rag.entities.entity_images import ImageVLMTestOutPut
@@ -197,6 +198,33 @@ def exist_image_file(model_name):
     for index, row in data.iterrows():
         exist_image_file_list.append(row.to_dict())
     return exist_image_file_list, data
+
+def invoke_model_tongyi():
+    model = TongyiLargeLanguageModel()
+
+    response = model.invoke(
+        model='qwen-turbo',
+        credentials={
+            'dashscope_api_key': os.environ.get('TONGYI_DASHSCOPE_API_KEY')
+        },
+        prompt_messages=[
+            UserPromptMessage(
+                content='你是谁'
+            )
+        ],
+        model_parameters={
+            'temperature': 0.1,
+            'max_tokens': 8196
+        },
+        stop=['How'],
+        stream=False,
+        user="abc-123"
+    )
+    loguru.logger.info(f"response:{response}")
+    loguru.logger.info(f"use_token:{response.usage}")
+
+
+
 
 def llm_execute():
     image_path = read_image_file()
