@@ -285,7 +285,6 @@ def exist_image_file():
     return exist_image_file_list,image_id_list
 
 def image_generator_conversation_data(data_dict):
-    tmp_data_list = []
     q_prompt = STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT
     a_prompt = STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
     response_dict2 = local_model_execute(data_dict, q_prompt.replace("{content}", data_dict['description']))
@@ -302,10 +301,10 @@ def image_generator_conversation_data(data_dict):
         convesation_format_human_dict["value"] = convesation_format_human_dict["value"].format(
             content=question)
         data_dict['conversations'].append(convesation_format_human_dict)
-        response_dict3 = local_model_execute(data_dict, a_prompt.format(content=question))
+        response_dict3 = local_model_execute(data_dict, a_prompt.format(content1=data_dict['description'],content2=question))
         convesation_format_gpt_dict["value"] = response_dict3['content']
         data_dict['conversations'].append(convesation_format_gpt_dict)
-    tmp_data_list.append(data_dict)
+    return data_dict
 
 
 
