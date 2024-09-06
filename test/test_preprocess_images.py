@@ -248,7 +248,7 @@ def llm_result_postprocess(llm_response_content):
     return json_string
 
 
-def post_data_images_test_output(data_dict,prompt):
+def post_data_images_test_output(data_dict, prompt):
     data = ImageVlmQualityLabel(
         image_id=data_dict['image_id'],
         image_oss_url=data_dict['image_oss_url'],
@@ -270,7 +270,7 @@ def exist_image_file():
     file_name_path = "data\\" + "quality_1000_result.csv"
     image_id_list = []
     if os.path.exists(file_name_path):
-        data = pd.read_csv(file_name_path,encoding="gb2312")
+        data = pd.read_csv(file_name_path, encoding="gb2312")
         ##存储之前已经执行的图片
         # for index, row in data.iterrows():
         #     exist_image_file_list.append(row.to_dict())
@@ -278,11 +278,12 @@ def exist_image_file():
     else:
         data_dict = ImageVlmQualityLabel().to_dict()
         data = pd.DataFrame([data_dict])
-        data.to_csv(file_name_path,index=False,encoding='gb2312')
+        data.to_csv(file_name_path, index=False, encoding='gb2312')
     for index, row in data.iterrows():
         exist_image_file_list.append(row.to_dict())
         image_id_list.append(row.to_dict()['image_id'])
-    return exist_image_file_list,image_id_list
+    return exist_image_file_list, image_id_list
+
 
 def image_generator_conversation_data(data_dict):
     q_prompt = STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT
@@ -301,12 +302,11 @@ def image_generator_conversation_data(data_dict):
         convesation_format_human_dict["value"] = convesation_format_human_dict["value"].format(
             content=question)
         data_dict['conversations'].append(convesation_format_human_dict)
-        response_dict3 = local_model_execute(data_dict, a_prompt.format(content1=data_dict['description'],content2=question))
+        response_dict3 = local_model_execute(data_dict,
+                                             a_prompt.format(content1=data_dict['description'], content2=question))
         convesation_format_gpt_dict["value"] = response_dict3['content']
         data_dict['conversations'].append(convesation_format_gpt_dict)
     return data_dict
-
-
 
 
 def image_generator_conversation_index(data_json_file):
@@ -315,16 +315,20 @@ def image_generator_conversation_index(data_json_file):
         data = json.loads(data)
         loguru.logger.info(f"data size :{len(data)}")
         image_id_list = []
+        data_dict_list = []
         # init_data_list,image_id_list = exist_image_file()
         # if init_data_list:
         #     test_data_list = init_data_list
         prompt = STARCHAT_QS_TEST_EVALUTE_PROMOPT
         for _data in data:
             ##先根据图片生成该图片描述的问题
-            if _data['image_id'] not in image_id_list :
+            if _data['image_id'] not in image_id_list:
                 ##url
                 loguru.logger.info(f"accident_label:{_data['accident_label']},description:{_data['description']}")
-                image_generator_conversation_data(_data)
+                data_dict = image_generator_conversation_data(_data)
+                data_dict_list.append(data_dict)
+                save_file_name = "data/images_table_format_new"+ ".json"
+                write_json_file(data_dict_list, save_file_name)
                 ##init output_data object
                 # output_data = post_data_images_test_output(_data, prompt)
                 # response_dict1 = model_execute(_data, prompt)
@@ -336,22 +340,19 @@ def image_generator_conversation_index(data_json_file):
                 # write_file(test_data_list)
 
 
-
 def read_xlsx_file_to_save_json(file_path):
     import polars as pl
     data = pl.read_excel(file_path, sheet_name="Sheet1")
     data = data.to_pandas()
-    # data = pd.read_excel(file_path,sheet_name="Sheet1")
-    # data.index.names = ["单号","项目id","照片","隐患部位","标准隐患编号","隐患内容","company_hidden_id","name","类型"]
-    data = data.head(5000)
+    data = data.head(10)
     data_save_list = []
     for index, row_data in data.iterrows():
         data_dict = row_data.to_dict()
         if data_dict['类型'] == "质量":
             image_name = data_dict['照片'].split("https://zhgd-prod-oss.oss-cn-shenzhen.aliyuncs.com/")[-1]
             ##download image dir
-            # is_download= download_image(data_dict['照片'], image_name)
-            if is_url_validation(data_dict['照片']):
+            is_download= download_image(data_dict['照片'], image_name)
+            if is_download:
                 data_entity = ImageTableProcess(
                     id=str(index),
                     image_id=image_name,
@@ -369,17 +370,15 @@ def read_xlsx_file_to_save_json(file_path):
                 )
                 data_save_list.append(data_entity.to_dict())
                 loguru.logger.info(f"data_save_list:{len(data_save_list)}")
-            if len(data_save_list) != 0 and len(data_save_list)==100:
-                save_file_name = "data/images_table_format_" + str(index) + ".json"
-                write_json_file(data_save_list, save_file_name)
-                ##每超过10W，保存一次，清洗之前的数组中数据
-                data_save_list.clear()
-                break
+            save_file_name = "data/images_table_format_" + str(len(data_save_list)) + ".json"
+            write_json_file(data_save_list, save_file_name)
+            ##每超过10W，保存一次，清洗之前的数组中数据
+            data_save_list.clear()
 
 
 def preprocee_table_images_data():
     file_path = "D:\\LLM\\need_product\\architecture\\images_table_05.xlsx"
     json_file_path = "data\\images_table_format_246.json"
     image_root = "data\\images\\"
-    image_generator_conversation_index(json_file_path)
-    # read_xlsx_file_to_save_json(file_path)
+    # image_generator_conversation_index(json_file_path)
+    read_xlsx_file_to_save_json(file_path)
