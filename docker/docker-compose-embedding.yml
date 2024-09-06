@@ -1,0 +1,33 @@
+services:
+  jinaembedding:
+    image: dhub.kubesre.xyz/ghcr.io/huggingface/text-embeddings-inference:1.5
+    restart: always
+    container_name: jina-embedding
+    volumes:
+      - /home/ziwei/gaojing/embedding:/data
+    command: --model-id /data/jina-embeddings-v2-base-zh
+    ports:
+      - "9991:80"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  bgereraker:
+    image: dhub.kubesre.xyz/ghcr.io/huggingface/text-embeddings-inference:1.5
+    restart: always
+    container_name: bge-reranker
+    command: --model-id /data/bge-reranker-v2-m3
+    volumes:
+      - /home/ziwei/gaojing/embedding:/data
+    ports:
+      - "9992:80"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
