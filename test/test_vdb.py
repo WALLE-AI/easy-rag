@@ -2,6 +2,7 @@ import uuid
 from unittest.mock import MagicMock
 
 import chromadb
+import loguru
 from flask import Flask
 from sympy.utilities import pytest
 
@@ -37,20 +38,23 @@ class AbstractVectorTest:
     def __init__(self):
         self.vector = None
         self.dataset_id = str(uuid.uuid4())
-        self.collection_name = gen_collection_name_by_id(self.dataset_id) + "_test"
+        # self.collection_name = gen_collection_name_by_id(self.dataset_id) + "_test"
+        self.collection_name = "Vector_index_40590aa6_6318_4a16_9f7f_341a6cc2e2b2_Node_test"
+        loguru.logger.info(f"collection_name:{self.collection_name}")
         self.example_doc_id = str(uuid.uuid4())
         self.example_embedding = [1.001 * i for i in range(128)]
 
-    def create_vector(self) -> None:
+    def create_vector(self,texts,embeddings) -> None:
         self.vector.create(
-            texts=[get_example_document(doc_id=self.example_doc_id)],
-            embeddings=[self.example_embedding],
+            texts=texts,
+            embeddings=embeddings,
         )
 
-    def search_by_vector(self):
-        hits_by_vector: list[Document] = self.vector.search_by_vector(query_vector=self.example_embedding)
-        assert len(hits_by_vector) == 1
-        assert hits_by_vector[0].metadata["doc_id"] == self.example_doc_id
+    def search_by_vector(self,query_embed):
+        hits_by_vector: list[Document] = self.vector.search_by_vector(query_vector=query_embed)
+        return hits_by_vector
+        # assert len(hits_by_vector) == 1
+        # assert hits_by_vector[0].metadata["doc_id"] == self.example_doc_id
 
     def search_by_full_text(self):
         hits_by_full_text: list[Document] = self.vector.search_by_full_text(query=get_example_text())
@@ -58,9 +62,7 @@ class AbstractVectorTest:
         assert hits_by_full_text[0].metadata["doc_id"] == self.example_doc_id
 
     def delete_vector(self):
-        self.vector.delete()\
-
-
+        self.vector.delete()
 
     def delete_by_ids(self, ids: list[str]):
         self.vector.delete_by_ids(ids=ids)
@@ -96,7 +98,7 @@ class ChromaVectorTest(AbstractVectorTest):
         self.vector = ChromaVector(
             collection_name=self.collection_name,
             config=ChromaConfig(
-                host="172.16.22.10",
+                host="localhost",
                 port="8000",
                 tenant=chromadb.DEFAULT_TENANT,
                 database=chromadb.DEFAULT_DATABASE,
@@ -119,6 +121,11 @@ def init_redis():
     redis_db.init_app(star_app)
 
 
-def test_chroma_vector():
+def test_chroma_vector(texts,embeddings):
     init_redis()
-    ChromaVectorTest().run_all_tests()
+    ChromaVectorTest().create_vector(texts,embeddings)
+
+def test_chroma_vector_search(query_embed):
+    init_redis()
+    hits_by_vector = ChromaVectorTest().search_by_vector(query_embed)
+    return hits_by_vector

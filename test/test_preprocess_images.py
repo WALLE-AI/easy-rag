@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import time
 import uuid
 from io import BytesIO
 
@@ -17,18 +18,21 @@ from model_runtime.entities.message_entities import SystemPromptMessage, TextPro
     ImagePromptMessageContent
 from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
+from model_runtime.model_providers.xinference.text_embedding.text_embedding import XinferenceTextEmbeddingModel
 from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT, STARCHAT_QUALITY_TEST_PROMOPT, \
     STARCHAT_QUALITY_TEST_PROMOPT_LABEL, STARCHAT_QS_TEST_EVALUTE_PROMOPT, STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT, \
     STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
 from rag.entities.document import Document
 from rag.entities.entity_images import ImageTableProcess, ImageVlmQualityLabel, ImageVlmModelOutPut
+from test_xinference_tgi_client import test_invoke_model_reranker_xinference
+from test_vdb import test_chroma_vector, test_chroma_vector_search
 from utils.models.provider import ProviderType
 
 from openai import OpenAI
 import loguru
 
 openai_api_key = "empty"
-openai_api_base = "http://36.103.239.202:9005/v1"
+openai_api_base = "http://xxxx:9005/v1"
 client = OpenAI(
     api_key=openai_api_key,
     base_url=openai_api_base,
@@ -288,7 +292,6 @@ def exist_image_file():
     return exist_image_file_list, image_id_list
 
 
-
 def image_generator_conversation_data(data_dict):
     q_prompt = STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT
     a_prompt = STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
@@ -331,7 +334,7 @@ def image_generator_conversation_index(data_json_file):
                 loguru.logger.info(f"accident_label:{_data['accident_label']},description:{_data['description']}")
                 data_dict = image_generator_conversation_data(_data)
                 data_dict_list.append(data_dict)
-                save_file_name = "data/images_table_format_new"+ ".json"
+                save_file_name = "data/images_table_format_new" + ".json"
                 write_json_file(data_dict_list, save_file_name)
                 ##init output_data object
                 # output_data = post_data_images_test_output(_data, prompt)
@@ -348,22 +351,70 @@ def read_xlsx_file_risk(risk_file_path):
     import polars as pl
     data = pl.read_excel(risk_file_path, sheet_name="Sheet1")
     data = data.to_pandas()
+    data = data.head(50)
     risk_doc_list = []
+    risk_doc_embed_list = []
     for index, row_data in data.iterrows():
         data_dict = row_data.to_dict()
         if data_dict['类型'] == "质量":
-            content = data_dict['隐患描述']+";"+data_dict['整改要求']
+            content = data_dict['隐患描述'] + ";" + data_dict['整改要求']
+            embed_result = test_invoke_model_xinference(content)
+            risk_doc_embed_list.append(embed_result.embeddings[0])
             risk_doc = Document(
                 page_content=content,
                 metadata={
                     "doc_id": str(uuid.uuid4()),
-                    "doc_hash": hashlib.sha3_256(content).hexdigest(),
-                    "document_id": data_dict['分类']
+                    "doc_hash": hashlib.sha3_256(content.encode('utf-8')).hexdigest(),
+                    "document_id": data_dict['分类'],
+                    "model":embed_result.model
                 },
             )
             risk_doc_list.append(risk_doc)
     ##获取documet data
-    return risk_doc_list
+    return risk_doc_list,risk_doc_embed_list
+
+
+def test_invoke_model_xinference(risk_doc):
+    model = XinferenceTextEmbeddingModel()
+    start_time = time.time()
+    result = model.invoke(
+        model="jina-embeddings-v2-base-zh",
+        credentials={
+            "server_url": "http://localhost:9997",
+            "model_uid": "jina-embeddings-v2-base-zh",
+        },
+        texts=[risk_doc],
+        user="abc-123",
+    )
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print("xinference dify Execution time: {:.2f} seconds".format(execution_time))
+    return result
+
+
+def risk_doc_create_embedding(risk_file_path):
+    risk_doc_list,risk_doc_embed_list = read_xlsx_file_risk(risk_file_path)
+    loguru.logger.info(f"embedding result {len(risk_doc_list)}")
+    test_chroma_vector(risk_doc_list,risk_doc_embed_list)
+
+
+
+def risk_doc_embedding_execuate():
+    risk_file_path = "D:\\InnovationProject\\WALLE-AI\\building_acident_datasets\\质量隐患库.xlsx"
+    risk_doc_create_embedding(risk_file_path)
+
+
+def risk_doc_recall_reranker(query,recall_doc_list):
+    reranker_result = test_invoke_model_reranker_xinference(query,recall_doc_list)
+    loguru.logger.info(f"reranker result {reranker_result}")
+
+def risk_instance_search():
+    query = "木龙骨未做防腐、防火处理"
+    query_embed = test_invoke_model_xinference(query)
+    search_result = test_chroma_vector_search(query_embed.embeddings[0])
+    loguru.logger.info(f"query:{query},search result {search_result}")
+    recall_doc_list = [recall_doc.page_content for recall_doc in search_result]
+    risk_doc_recall_reranker(query,recall_doc_list)
 
 
 
@@ -378,7 +429,7 @@ def read_xlsx_file_to_save_json(file_path):
         if data_dict['类型'] == "质量":
             image_name = data_dict['照片'].split("https://zhgd-prod-oss.oss-cn-shenzhen.aliyuncs.com/")[-1]
             ##download image dir
-            is_download= download_image(data_dict['照片'], image_name)
+            is_download = download_image(data_dict['照片'], image_name)
             if is_download:
                 data_entity = ImageTableProcess(
                     id=str(index),

@@ -36,7 +36,7 @@ class ChromaConfig(BaseModel):
             'ssl': False,
             'tenant': self.tenant,
             'database': self.database,
-            'settings': settings,
+            # 'settings': settings,
         }
 
 

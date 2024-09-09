@@ -11,7 +11,7 @@ import json
 
 def send_post_request():
     start_time = time.time()
-    url = 'http://172.16.22.10:9991/embed'
+    url = 'http://xxxxx:9991/embed'
     headers = {'Content-Type': 'application/json'}
     data = {'inputs': ["你是谁","你能够做什么"]}
     # data = {"query":"What is Deep Learning?", "texts": ["Deep Learning is not...", "Deep learning is..."]}
@@ -63,7 +63,7 @@ def test_invoke_model_xinference():
     print("text embedding {}".format(result))
     print("xinference dify Execution time: {:.2f} seconds".format(execution_time))
 
-def test_invoke_model_reranker_xinference():
+def test_invoke_model_reranker_xinference(query,recall_doc_list):
     model = XinferenceRerankModel()
 
     result = model.invoke(
@@ -72,15 +72,12 @@ def test_invoke_model_reranker_xinference():
             "server_url": "http://localhost:9997",
             "model_uid": "jina-reranker-v2-base-multilingual",
         },
-        query="Who is Kasumi?",
-        docs=[
-            'Kasumi is a girl\'s name of Japanese origin meaning "mist".',
-            "Her music is a kawaii bass, a mix of future bass, pop, and kawaii music ",
-            "and she leads a team named PopiParty.",
-        ],
+        query=query,
+        docs=recall_doc_list,
         score_threshold=0.4,
     )
     print("text embedding {}".format(result))
+    return result
 
 if __name__ == "__main__":
     test_invoke_model_xinference()
