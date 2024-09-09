@@ -1,6 +1,8 @@
 import base64
+import hashlib
 import json
 import os
+import uuid
 from io import BytesIO
 
 import loguru
@@ -18,6 +20,7 @@ from model_runtime.model_providers import ModelProviderFactory
 from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT, STARCHAT_QUALITY_TEST_PROMOPT, \
     STARCHAT_QUALITY_TEST_PROMOPT_LABEL, STARCHAT_QS_TEST_EVALUTE_PROMOPT, STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT, \
     STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
+from rag.entities.document import Document
 from rag.entities.entity_images import ImageTableProcess, ImageVlmQualityLabel, ImageVlmModelOutPut
 from utils.models.provider import ProviderType
 
@@ -339,6 +342,29 @@ def image_generator_conversation_index(data_json_file):
                 # test_data_list.append(output_data)
                 # loguru.logger.info(f"save local file .....")
                 # write_file(test_data_list)
+
+
+def read_xlsx_file_risk(risk_file_path):
+    import polars as pl
+    data = pl.read_excel(risk_file_path, sheet_name="Sheet1")
+    data = data.to_pandas()
+    risk_doc_list = []
+    for index, row_data in data.iterrows():
+        data_dict = row_data.to_dict()
+        if data_dict['类型'] == "质量":
+            content = data_dict['隐患描述']+";"+data_dict['整改要求']
+            risk_doc = Document(
+                page_content=content,
+                metadata={
+                    "doc_id": str(uuid.uuid4()),
+                    "doc_hash": hashlib.sha3_256(content).hexdigest(),
+                    "document_id": data_dict['分类']
+                },
+            )
+            risk_doc_list.append(risk_doc)
+    ##获取documet data
+    return risk_doc_list
+
 
 
 def read_xlsx_file_to_save_json(file_path):
