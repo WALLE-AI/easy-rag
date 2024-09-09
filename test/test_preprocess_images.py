@@ -285,6 +285,7 @@ def exist_image_file():
     return exist_image_file_list, image_id_list
 
 
+
 def image_generator_conversation_data(data_dict):
     q_prompt = STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT
     a_prompt = STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
