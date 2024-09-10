@@ -1,7 +1,9 @@
+import os
+
 from openai import OpenAI
 import loguru
 openai_api_key = "empty"
-openai_api_base = "http://36.103.239.202:9005/v1"
+openai_api_base = os.getenv("VLM_SERVE_HOST") +":9005/v1"
 client = OpenAI(
     api_key=openai_api_key,
     base_url=openai_api_base,

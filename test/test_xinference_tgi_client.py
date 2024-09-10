@@ -1,3 +1,4 @@
+import os
 import time
 
 from xinference.client import Client
@@ -9,9 +10,15 @@ from model_runtime.model_providers.xinference.text_embedding.text_embedding impo
 import requests
 import json
 
+# from load_env import load_env_file
+#
+# model_config =load_env_file()
+
+
+
 def send_post_request():
     start_time = time.time()
-    url = 'http://xxxxx:9991/embed'
+    url = os.getenv("EMBEDDING_SERVE_HOST")+':9991/embed'
     headers = {'Content-Type': 'application/json'}
     data = {'inputs': ["你是谁","你能够做什么"]}
     # data = {"query":"What is Deep Learning?", "texts": ["Deep Learning is not...", "Deep learning is..."]}

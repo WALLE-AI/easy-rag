@@ -1,5 +1,7 @@
 import loguru
 
+from load_env import load_env
+from test_tgi import send_post_request
 # from test.test_llm import test_llm, test_invoke_model_tongyi
 # from test.test_model_provider import test_get_models, test_provider_credentials_validate,test_model_proveder
 # from test.test_node_plan import test_node_plan
@@ -9,8 +11,10 @@ from test_preprocess_images import risk_doc_embedding_execuate, risk_instance_se
 # from test.test_reranker import test_reranker_model
 # from test.test_vision_model_qs import write_file, llm_execute
 
+
 if __name__ =="__main__":
     loguru.logger.info(f"test start")
+    load_env()
     # test_provider_credentials_validate()
     # test_get_models()
-    risk_instance_search()
+    send_post_request()

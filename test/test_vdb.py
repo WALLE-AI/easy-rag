@@ -1,3 +1,4 @@
+import os
 import uuid
 from unittest.mock import MagicMock
 
@@ -98,7 +99,7 @@ class ChromaVectorTest(AbstractVectorTest):
         self.vector = ChromaVector(
             collection_name=self.collection_name,
             config=ChromaConfig(
-                host="localhost",
+                host=os.getenv("CHROMA_HOST"),
                 port="8000",
                 tenant=chromadb.DEFAULT_TENANT,
                 database=chromadb.DEFAULT_DATABASE,
