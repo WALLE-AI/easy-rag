@@ -5,7 +5,7 @@ import json
 
 def send_post_request():
     start_time = time.time()
-    url = 'http://172.16.22.10:9991/embed'
+    url = 'http://xxxxx:9991/embed'
     headers = {'Content-Type': 'application/json'}
     data = {'inputs': ["你是谁","你能够做什么"]}
     # data = {"query":"What is Deep Learning?", "texts": ["Deep Learning is not...", "Deep learning is..."]}
