@@ -40,7 +40,7 @@ class AbstractVectorTest:
         self.vector = None
         self.dataset_id = str(uuid.uuid4())
         # self.collection_name = gen_collection_name_by_id(self.dataset_id) + "_test"
-        self.collection_name = "Vector_index_40590aa6_6318_4a16_9f7f_341a6cc2e2b2_Node_test"
+        self.collection_name = "Vector_index_96974a26_8dcd_4500_b2c3_4259a61f313a_Node_test"
         loguru.logger.info(f"collection_name:{self.collection_name}")
         self.example_doc_id = str(uuid.uuid4())
         self.example_embedding = [1.001 * i for i in range(128)]
@@ -52,7 +52,7 @@ class AbstractVectorTest:
         )
 
     def search_by_vector(self,query_embed):
-        hits_by_vector: list[Document] = self.vector.search_by_vector(query_vector=query_embed)
+        hits_by_vector: list[Document] = self.vector.search_by_vector(query_vector=query_embed,top_k=10,score_threshold=0.7)
         return hits_by_vector
         # assert len(hits_by_vector) == 1
         # assert hits_by_vector[0].metadata["doc_id"] == self.example_doc_id

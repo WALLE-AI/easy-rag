@@ -7,6 +7,7 @@ import uuid
 from io import BytesIO
 
 import loguru
+import numpy as np
 import pandas as pd
 import requests
 from PIL import Image
@@ -31,12 +32,14 @@ from utils.models.provider import ProviderType
 from openai import OpenAI
 import loguru
 
-openai_api_key = "empty"
-openai_api_base = os.getenv("VLM_SERVE_HOST") +":9005/v1"
-client = OpenAI(
-    api_key=openai_api_key,
-    base_url=openai_api_base,
-)
+def init_client():
+    openai_api_key = "empty"
+    openai_api_base = os.getenv("VLM_SERVE_HOST") +":9005/v1"
+    client = OpenAI(
+        api_key=openai_api_key,
+        base_url=openai_api_base,
+    )
+    return client
 
 input_args = {
     "stream": False,
@@ -56,9 +59,9 @@ def write_json_file(data_dict, save_file_name):
 
 
 def write_file(response_data_list):
-    file_name_path = "data\\" + "quality_1000_result.csv"
+    file_name_path = "data\\" + "quality_1000_result_recall.csv"
     data = pd.DataFrame(response_data_list)
-    data.to_csv(file_name_path, index=False, encoding='gb2312')
+    data.to_csv(file_name_path, index=False, encoding='GBK')
 
 
 def download_image(url, filename):
@@ -150,6 +153,7 @@ def image_to_base64(image_path):
 
 
 def local_model_execute(data_dict, prompt):
+    client = init_client()
     models = client.models.list()
     model_name = models.data[0].id
     loguru.logger.info(f"model name {model_name}")
@@ -346,27 +350,58 @@ def image_generator_conversation_index(data_json_file):
                 # loguru.logger.info(f"save local file .....")
                 # write_file(test_data_list)
 
+def tgi_inference_embedding(risk_doc):
+    start_time = time.time()
+    url = os.getenv("EMBEDDING_SERVE_HOST") + ':9991/embed'
+    headers = {'Content-Type': 'application/json'}
+    data = {'inputs': [risk_doc]}
+    # data = {"query":"What is Deep Learning?", "texts": ["Deep Learning is not...", "Deep learning is..."]}
+    # 发送POST请求
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    end_time = time.time()
+    execution_time = end_time - start_time
+    # 打印响应内容
+    print("Status Code:", response.status_code)
+    print("TGI Execution time: {:.2f} seconds".format(execution_time))
+    loguru.logger.info(f"risk doc:{risk_doc},embedding:{response.text}")
+    return json.loads(response.text)
+
+def tgi_inference_reranker(query,risk_doc_list):
+    start_time = time.time()
+    url = os.getenv("EMBEDDING_SERVE_HOST") + ':9992/rerank'
+    headers = {'Content-Type': 'application/json'}
+    data = {"query":query, "texts": risk_doc_list,  "raw_scores": False,"return_text": True,}
+    # 发送POST请求
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    end_time = time.time()
+    execution_time = end_time - start_time
+    # 打印响应内容
+    print("Status Code:", response.status_code)
+    print("TGI Execution time: {:.2f} seconds".format(execution_time))
+    loguru.logger.info(f"query:{query},recal_risk_doc:{response.text}")
+    return json.loads(response.text)
+
+
 
 def read_xlsx_file_risk(risk_file_path):
     import polars as pl
     data = pl.read_excel(risk_file_path, sheet_name="Sheet1")
     data = data.to_pandas()
-    data = data.head(50)
     risk_doc_list = []
     risk_doc_embed_list = []
     for index, row_data in data.iterrows():
         data_dict = row_data.to_dict()
         if data_dict['类型'] == "质量":
             content = data_dict['隐患描述'] + ";" + data_dict['整改要求']
-            embed_result = test_invoke_model_xinference(content)
-            risk_doc_embed_list.append(embed_result.embeddings[0])
+            embed_result = tgi_inference_embedding(content)
+            risk_doc_embed_list.append(embed_result[0])
             risk_doc = Document(
                 page_content=content,
                 metadata={
                     "doc_id": str(uuid.uuid4()),
                     "doc_hash": hashlib.sha3_256(content.encode('utf-8')).hexdigest(),
                     "document_id": data_dict['分类'],
-                    "model":embed_result.model
+                    # "model":embed_result.model
                 },
             )
             risk_doc_list.append(risk_doc)
@@ -398,31 +433,49 @@ def risk_doc_create_embedding(risk_file_path):
     test_chroma_vector(risk_doc_list,risk_doc_embed_list)
 
 
-
 def risk_doc_embedding_execuate():
-    risk_file_path = "D:\\InnovationProject\\WALLE-AI\\building_acident_datasets\\质量隐患库.xlsx"
+    risk_file_path = os.getenv("RISK_DOC_PATH")
     risk_doc_create_embedding(risk_file_path)
 
 
 def risk_doc_recall_reranker(query,recall_doc_list):
-    reranker_result = test_invoke_model_reranker_xinference(query,recall_doc_list)
+    reranker_result = tgi_inference_reranker(query,recall_doc_list)
     loguru.logger.info(f"reranker result {reranker_result}")
+    return reranker_result
 
-def risk_instance_search():
-    query = "木龙骨未做防腐、防火处理"
-    query_embed = test_invoke_model_xinference(query)
-    search_result = test_chroma_vector_search(query_embed.embeddings[0])
+def risk_instance_search(query):
+    query_embed = tgi_inference_embedding(query)
+    search_result = test_chroma_vector_search(query_embed[0])
     loguru.logger.info(f"query:{query},search result {search_result}")
-    recall_doc_list = [recall_doc.page_content for recall_doc in search_result]
-    risk_doc_recall_reranker(query,recall_doc_list)
+    if search_result:
+        recall_doc_list = [recall_doc.page_content for recall_doc in search_result]
+        reranker_result = risk_doc_recall_reranker(query,recall_doc_list)
+    else:
+        reranker_result = []
+    return reranker_result
 
+def test_risk_instance_recall_reranker():
+    instance_risk_doc_path = "data\\quality_1000_result.csv"
+    instance_risk_data = pd.read_csv(instance_risk_doc_path,encoding="gb2312")
+    loguru.logger.info(f"instance risk data {len(instance_risk_data)}")
+    new_quality_instance_risk_doc_list = []
+    for index,row in instance_risk_data.iterrows():
+        data_dict  = row.to_dict()
+        risk_doc = data_dict['description']
+        risk_recall_doc = risk_instance_search(risk_doc)
+        if risk_recall_doc:
+            data_dict['risk_recall'] = "\n".join([str(doc['index'])+"."+doc["text"] for doc in risk_recall_doc[:3]])
+        else:
+            data_dict['risk_recall'] = ""
+        new_quality_instance_risk_doc_list.append(data_dict)
+        write_file(new_quality_instance_risk_doc_list)
 
 
 def read_xlsx_file_to_save_json(file_path):
     import polars as pl
     data = pl.read_excel(file_path, sheet_name="Sheet1")
     data = data.to_pandas()
-    data = data.head(10)
+    loguru.logger.info(f"data size :{len(data)}")
     data_save_list = []
     for index, row_data in data.iterrows():
         data_dict = row_data.to_dict()
@@ -447,11 +500,9 @@ def read_xlsx_file_to_save_json(file_path):
                     label="0"
                 )
                 data_save_list.append(data_entity.to_dict())
-                loguru.logger.info(f"data_save_list:{len(data_save_list)}")
-            save_file_name = "data/images_table_format_" + str(len(data_save_list)) + ".json"
-            write_json_file(data_save_list, save_file_name)
-            ##每超过10W，保存一次，清洗之前的数组中数据
-            data_save_list.clear()
+    loguru.logger.info(f"data_save_list:{len(data_save_list)}")
+    save_file_name = "data/images_table_format_" + str(len(data_save_list)) + ".json"
+    write_json_file(data_save_list, save_file_name)
 
 
 def preprocee_table_images_data():

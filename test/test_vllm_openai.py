@@ -2,13 +2,16 @@ import os
 
 from openai import OpenAI
 import loguru
-openai_api_key = "empty"
-openai_api_base = os.getenv("VLM_SERVE_HOST") +":9005/v1"
-client = OpenAI(
-    api_key=openai_api_key,
-    base_url=openai_api_base,
-)
+def init_client():
+    openai_api_key = "empty"
+    openai_api_base = os.getenv("VLM_SERVE_HOST") +":9005/v1"
+    client = OpenAI(
+        api_key=openai_api_key,
+        base_url=openai_api_base,
+    )
+    return client
 def test_vllm_openai_client():
+    client = init_client()
     models = client.models.list()
     model = models.data[0].id
     loguru.logger.info(f"model name {model}")
