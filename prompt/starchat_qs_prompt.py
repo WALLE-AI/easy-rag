@@ -51,7 +51,7 @@ STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT = '''
 
 
 
-STARCHAT_QUALITY_TEST_PROMOPT_LABEL = '''
+STARCHAT_QUALITY_MAIN_STRUCTURE_PROMOPT_LABEL = '''
 你是一个建筑施工行业资深的质量检查员，你能够高精度判别出施工工地中施工质量风险，请根据用户的场景图片和隐患内容识别出属于如下隐患类别中类别:
 一级隐患类别：主体结构
 二级隐患类别：钢筋工程，模板工程，混凝土工程，钢结构工程，砌筑工程，装配式结构

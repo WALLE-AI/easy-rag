@@ -21,8 +21,8 @@ from model_runtime.entities.model_entities import ModelType
 from model_runtime.model_providers import ModelProviderFactory
 from model_runtime.model_providers.xinference.text_embedding.text_embedding import XinferenceTextEmbeddingModel
 from prompt.starchat_qs_prompt import STARCHAT_QS_TEST_PROMOPT, STARCHAT_QUALITY_TEST_PROMOPT, \
-    STARCHAT_QUALITY_TEST_PROMOPT_LABEL, STARCHAT_QS_TEST_EVALUTE_PROMOPT, STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT, \
-    STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT
+     STARCHAT_QS_TEST_EVALUTE_PROMOPT, STARCHAT_QS_QUESTION_GENERATOR_RPROMOPT, \
+    STARCHAT_QS_ANSWER_GENERATOR_RPROMOPT, STARCHAT_QUALITY_MAIN_STRUCTURE_PROMOPT_LABEL
 from rag.entities.document import Document
 from rag.entities.entity_images import ImageTableProcess, ImageVlmQualityLabel, ImageVlmModelOutPut
 from test_xinference_tgi_client import test_invoke_model_reranker_xinference
@@ -65,20 +65,25 @@ def write_file(response_data_list):
 
 
 def download_image(url, filename):
-    images_dir_path = "data\\images\\" + filename
-    loguru.logger.info(f"images dir path {images_dir_path}")
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # 检查请求是否成功
-        with open(images_dir_path, 'wb') as f:
-            f.write(response.content)
-            loguru.logger.info(f"image save：{filename}")
-            return True
-    except requests.RequestException as e:
-        loguru.logger.info(f"request error：{e}")
+    root_image = "data\\images\\"
+    images_dir_path = root_image + filename
+    # loguru.logger.info(f"images dir path {images_dir_path}")
+    if filename in load_images_from_folder(root_image):
+        loguru.logger.info(f"image is exist,no donwload")
         return False
-    except IOError as e:
-        loguru.logger.info(f"request io error：{e}")
+    else:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # 检查请求是否成功
+            with open(images_dir_path, 'wb') as f:
+                f.write(response.content)
+                loguru.logger.info(f"image save：{filename}")
+                return True
+        except requests.RequestException as e:
+            loguru.logger.info(f"request error：{e}")
+            return False
+        except IOError as e:
+            loguru.logger.info(f"request io error：{e}")
 
 
 def is_url_validation(image_url):
@@ -470,6 +475,14 @@ def test_risk_instance_recall_reranker():
         new_quality_instance_risk_doc_list.append(data_dict)
         write_file(new_quality_instance_risk_doc_list)
 
+def load_images_from_folder(folder_path):
+    images_list = []
+    for filename in os.listdir(folder_path):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+            images_list.append(filename)
+    return images_list
+
+
 
 def read_xlsx_file_to_save_json(file_path):
     import polars as pl
@@ -482,6 +495,26 @@ def read_xlsx_file_to_save_json(file_path):
         if data_dict['类型'] == "质量":
             image_name = data_dict['照片'].split("https://zhgd-prod-oss.oss-cn-shenzhen.aliyuncs.com/")[-1]
             ##download image dir
+            if image_name in load_images_from_folder("data\\images"):
+                loguru.logger.info(f"image is exist,no donwload")
+                data_entity = ImageTableProcess(
+                    id=str(index),
+                    image_id=image_name,
+                    image_correct_id="",
+                    image_oss_url=data_dict['照片'],
+                    conversations=[{}],
+                    position=data_dict["隐患部位"] if isinstance(data_dict['隐患部位'], str) else "",
+                    accident_label=data_dict['name'] if isinstance(data_dict['name'], str) else "",
+                    description=data_dict['隐患内容'],
+                    correct_description="",
+                    type=data_dict['类型'],
+                    risk="",
+                    correct_basic="",
+                    label="0"
+                )
+                data_save_list.append(data_entity.to_dict())
+                continue
+            ##下载图片
             is_download = download_image(data_dict['照片'], image_name)
             if is_download:
                 data_entity = ImageTableProcess(
@@ -500,14 +533,43 @@ def read_xlsx_file_to_save_json(file_path):
                     label="0"
                 )
                 data_save_list.append(data_entity.to_dict())
+        if len(data_save_list) == 10000:
+            loguru.logger.info(f"data_save_list:{len(data_save_list)}")
+            save_file_name = "data/images_table_format_" + str(len(data_save_list)) + ".json"
+            write_json_file(data_save_list, save_file_name)
+            break
     loguru.logger.info(f"data_save_list:{len(data_save_list)}")
     save_file_name = "data/images_table_format_" + str(len(data_save_list)) + ".json"
     write_json_file(data_save_list, save_file_name)
 
+def read_main_structure_data(data_json_file):
+    '''
+    抽取主体结构的类似的数据
+    :return:
+    '''
+    with open(data_json_file, "r", encoding="utf-8") as file:
+        data = file.read()
+        data = json.loads(data)
+        loguru.logger.info(f"data size :{len(data)}")
+        output_message_list = []
+        for _data in data:
+            if _data['accident_label'] == "主体结构":
+                prompt = STARCHAT_QUALITY_MAIN_STRUCTURE_PROMOPT_LABEL.replace("{content}",_data["description"])
+                response = local_model_execute(_data,prompt)
+                loguru.logger.info(f"reponse:{response}")
+            output_message={
+                "隐患描述":_data["description"],
+                "一级隐患类别":_data['accident_label'],
+                "二级隐患类别":"",
+                "三级隐患类别":"",
+                "total_tokens":""
+            }
+            output_message_list.append(output_message)
 
 def preprocee_table_images_data():
     file_path = "D:\\LLM\\need_product\\architecture\\images_table_05.xlsx"
     json_file_path = "data\\images_table_format_246.json"
     image_root = "data\\images\\"
+    main_structure_data_path = "data\\images_table_format_59973.json"
     # image_generator_conversation_index(json_file_path)
-    read_xlsx_file_to_save_json(file_path)
+    read_main_structure_data(main_structure_data_path)
