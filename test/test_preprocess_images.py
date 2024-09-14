@@ -542,34 +542,49 @@ def read_xlsx_file_to_save_json(file_path):
     save_file_name = "data/images_table_format_" + str(len(data_save_list)) + ".json"
     write_json_file(data_save_list, save_file_name)
 
+
+
 def read_main_structure_data(data_json_file):
     '''
     抽取主体结构的类似的数据
     :return:
     '''
+    from json_repair import repair_json
     with open(data_json_file, "r", encoding="utf-8") as file:
         data = file.read()
         data = json.loads(data)
         loguru.logger.info(f"data size :{len(data)}")
         output_message_list = []
-        for _data in data:
+        user_total_tokens = 0
+        for _data in data[:200]:
             if _data['accident_label'] == "主体结构":
                 prompt = STARCHAT_QUALITY_MAIN_STRUCTURE_PROMOPT_LABEL.replace("{content}",_data["description"])
                 response = local_model_execute(_data,prompt)
-                loguru.logger.info(f"reponse:{response}")
-            output_message={
-                "隐患描述":_data["description"],
-                "一级隐患类别":_data['accident_label'],
-                "二级隐患类别":"",
-                "三级隐患类别":"",
-                "total_tokens":""
-            }
-            output_message_list.append(output_message)
+                json_content = repair_json(response['content'], return_objects = True)
+                json_content_list=["",""]
+                if isinstance(json_content,dict):
+                    json_content_list =[text for text in json_content.values()]
+                loguru.logger.info(f"reponse:{json_content}")
+                output_message={
+                    "图片地址":_data["image_oss_url"],
+                    "隐患描述":_data["description"],
+                    "一级隐患类别":_data['accident_label'],
+                    "二级隐患类别":json_content_list[0],
+                    "三级隐患类别":json_content_list[1],
+                    "total_tokens":response['total_tokens']
+                }
+                output_message_list.append(output_message)
+                user_total_tokens += response['total_tokens']
+    loguru.logger.info(f"user_total_tokens:{user_total_tokens}")
+    file_name_path = "data\\" + "quality_10000_result_cluster_200.csv"
+    data = pd.DataFrame(output_message_list)
+    data.to_csv(file_name_path, index=False, encoding='GBK')
+
 
 def preprocee_table_images_data():
     file_path = "D:\\LLM\\need_product\\architecture\\images_table_05.xlsx"
     json_file_path = "data\\images_table_format_246.json"
     image_root = "data\\images\\"
-    main_structure_data_path = "data\\images_table_format_59973.json"
+    main_structure_data_path = "data\\images_table_format_10000.json"
     # image_generator_conversation_index(json_file_path)
     read_main_structure_data(main_structure_data_path)
