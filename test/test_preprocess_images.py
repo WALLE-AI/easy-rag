@@ -556,7 +556,7 @@ def read_main_structure_data(data_json_file):
         loguru.logger.info(f"data size :{len(data)}")
         output_message_list = []
         user_total_tokens = 0
-        for _data in data[:200]:
+        for _data in data[:10000]:
             if _data['accident_label'] == "主体结构":
                 prompt = STARCHAT_QUALITY_MAIN_STRUCTURE_PROMOPT_LABEL.replace("{content}",_data["description"])
                 response = local_model_execute(_data,prompt)
